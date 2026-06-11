@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Membre {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom             String
+  prenom          String
+  email           String?   @unique
+  telephone       String?
+  adresse         String?
+  dateNaissance   DateTime? @map("date_naissance")
+  dateInscription DateTime  @default(now()) @map("date_inscription")
+  statut          String    @default("actif")
+  departementId   String?   @map("departement_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  departement   Departement?  @relation(fields: [departementId], references: [id], onDelete: SetNull)
+  utilisateur   Utilisateur?
+  transactions  Transaction[]
+  responsableDe Departement[] @relation("Responsable")
+
+  @@map("membres")
+}
+
+model Departement {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom           String   @unique
+  description   String?
+  responsableId String?  @map("responsable_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  responsable Membre?              @relation("Responsable", fields: [responsableId], references: [id])
+  membres     Membre[]
+  rapports    RapportDepartement[]
+
+  @@map("departements")
+}
+
+model Utilisateur {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email            String    @unique
+  motDePasse       String    @map("mot_de_passe")
+  role             String
+  membreId         String?   @unique @map("membre_id") @db.Uuid
+  actif            Boolean   @default(true)
+  dernierConnexion DateTime? @map("dernier_connexion")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  membre       Membre?              @relation(fields: [membreId], references: [id])
+  transactions Transaction[]        @relation("CreatedBy")
+  rapports     RapportDepartement[] @relation("CreatedByRapport")
+  logs         LogActivite[]
+
+  @@map("utilisateurs")
+}
+
+model Categorie {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom         String
+  type        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  transactions Transaction[]
+
+  @@unique([nom, type])
+  @@map("categories")
+}
+
+model Transaction {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type            String
+  categorieId     String   @map("categorie_id") @db.Uuid
+  membreId        String?  @map("membre_id") @db.Uuid
+  montant         Decimal  @db.Decimal(10, 2)
+  dateTransaction DateTime @default(now()) @map("date_transaction")
+  description     String?
+  justificatif    String?
+  createdBy       String?  @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  categorie Categorie    @relation(fields: [categorieId], references: [id])
+  membre    Membre?      @relation(fields: [membreId], references: [id])
+  createur  Utilisateur? @relation("CreatedBy", fields: [createdBy], references: [id])
+
+  @@map("transactions")
+}
+
+model RapportDepartement {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  departementId String   @map("departement_id") @db.Uuid
+  titre         String
+  contenu       String
+  periode       DateTime @default(now())
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  departement Departement  @relation(fields: [departementId], references: [id])
+  createur    Utilisateur? @relation("CreatedByRapport", fields: [createdBy], references: [id])
+
+  @@map("rapports_departement")
+}
+
+model LogActivite {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  utilisateurId String?  @map("utilisateur_id") @db.Uuid
+  action        String?
+  tableName     String?  @map("table_name")
+  recordId      String?  @map("record_id") @db.Uuid
+  details       Json?
+  ipAddress     String?  @map("ip_address")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  utilisateur Utilisateur? @relation(fields: [utilisateurId], references: [id])
+
+  @@map("logs_activites")
+}
