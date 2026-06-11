@@ -76,8 +76,6 @@ export const getTransactions = async (req, res) => {
       success: true,
       data: transactions,
       totals: {
-        totalEntrees: type === 'entree' || !type ? totals._sum.montant : null,
-        totalSorties: type === 'sortie' || !type ? totals._sum.montant : null,
         parDevise: totalsByDevise
       },
       pagination: {
@@ -342,7 +340,7 @@ export const deleteTransaction = async (req, res) => {
  */
 export const getFinancialReport = async (req, res) => {
   try {
-    const { periode = 'month', dateDebut, dateFin, devise = 'CDF' } = req.query
+    const { periode = 'year', dateDebut, dateFin } = req.query
     
     let startDate, endDate
     
@@ -364,10 +362,13 @@ export const getFinancialReport = async (req, res) => {
           startDate.setFullYear(startDate.getFullYear() - 1)
           break
         default:
-          startDate.setMonth(startDate.getMonth() - 1)
+          startDate.setFullYear(startDate.getFullYear() - 1)
       }
     }
     
+    console.log('📊 RAPPORT - Période:', { startDate, endDate, periode })
+    
+    // Récupérer TOUTES les transactions
     const transactions = await prisma.transaction.findMany({
       where: {
         dateTransaction: {
@@ -376,91 +377,125 @@ export const getFinancialReport = async (req, res) => {
         }
       },
       include: {
-        categorie: true
+        categorie: true,
+        membre: {
+          select: { nom: true, prenom: true }
+        }
       }
     })
     
-    // Filtrer par devise si spécifiée
-    const filteredTransactions = devise === 'all' ? transactions : transactions.filter(t => t.devise === devise)
+    console.log(`📊 Total transactions: ${transactions.length}`)
     
-    const entrees = filteredTransactions.filter(t => t.type === 'entree')
-    const sorties = filteredTransactions.filter(t => t.type === 'sortie')
-    
-    // Calculer les totaux dans la devise demandée
-    let totalEntrees = 0
-    let totalSorties = 0
-    
-    if (devise === 'all') {
-      // Convertir tous les montants en CDF pour le total général
-      entrees.forEach(t => {
-        totalEntrees += t.devise === 'USD' ? convertirMontant(t.montant, 'USD', 'CDF') : t.montant
-      })
-      sorties.forEach(t => {
-        totalSorties += t.devise === 'USD' ? convertirMontant(t.montant, 'USD', 'CDF') : t.montant
-      })
-    } else {
-      totalEntrees = entrees.reduce((sum, t) => sum + parseFloat(t.montant), 0)
-      totalSorties = sorties.reduce((sum, t) => sum + parseFloat(t.montant), 0)
-    }
-    
-    const solde = totalEntrees - totalSorties
-    
-    const entreesParCategorie = {}
-    entrees.forEach(t => {
-      const catName = t.categorie.nom
-      let montant = parseFloat(t.montant)
-      if (devise === 'all' && t.devise === 'USD') {
-        montant = convertirMontant(montant, 'USD', 'CDF')
-      }
-      entreesParCategorie[catName] = (entreesParCategorie[catName] || 0) + montant
-    })
-    
-    const sortiesParCategorie = {}
-    sorties.forEach(t => {
-      const catName = t.categorie.nom
-      let montant = parseFloat(t.montant)
-      if (devise === 'all' && t.devise === 'USD') {
-        montant = convertirMontant(montant, 'USD', 'CDF')
-      }
-      sortiesParCategorie[catName] = (sortiesParCategorie[catName] || 0) + montant
-    })
-    
-    // Statistiques par devise
+    // Initialiser les statistiques par devise
     const statsParDevise = {
-      USD: {
-        entrees: transactions.filter(t => t.type === 'entree' && t.devise === 'USD').reduce((sum, t) => sum + parseFloat(t.montant), 0),
-        sorties: transactions.filter(t => t.type === 'sortie' && t.devise === 'USD').reduce((sum, t) => sum + parseFloat(t.montant), 0),
-      },
-      CDF: {
-        entrees: transactions.filter(t => t.type === 'entree' && t.devise === 'CDF').reduce((sum, t) => sum + parseFloat(t.montant), 0),
-        sorties: transactions.filter(t => t.type === 'sortie' && t.devise === 'CDF').reduce((sum, t) => sum + parseFloat(t.montant), 0),
+      USD: { entrees: 0, sorties: 0, solde: 0, nombre: 0 },
+      CDF: { entrees: 0, sorties: 0, solde: 0, nombre: 0 }
+    }
+    
+    // Parcourir TOUTES les transactions
+    for (const t of transactions) {
+      const devise = t.devise || 'CDF'
+      const montant = parseFloat(t.montant)
+      
+      if (t.type === 'entree') {
+        statsParDevise[devise].entrees += montant
+        statsParDevise[devise].nombre++
+      } else {
+        statsParDevise[devise].sorties += montant
       }
     }
     
+    // Calculer les soldes
     statsParDevise.USD.solde = statsParDevise.USD.entrees - statsParDevise.USD.sorties
     statsParDevise.CDF.solde = statsParDevise.CDF.entrees - statsParDevise.CDF.sorties
+    
+    console.log('📊 Stats USD:', statsParDevise.USD)
+    console.log('📊 Stats CDF:', statsParDevise.CDF)
+    
+    // Calculer les totaux en CDF (pour le résumé global)
+    let totalEntreesCDF = statsParDevise.CDF.entrees + (statsParDevise.USD.entrees * DEFAULT_TX_RATE)
+    let totalSortiesCDF = statsParDevise.CDF.sorties + (statsParDevise.USD.sorties * DEFAULT_TX_RATE)
+    
+    // Calculer les totaux par catégorie (en CDF)
+    const entreesParCategorie = {}
+    const sortiesParCategorie = {}
+    
+    for (const t of transactions) {
+      const catName = t.categorie?.nom || 'Sans catégorie'
+      let montant = parseFloat(t.montant)
+      
+      // Convertir en CDF pour l'affichage
+      if (t.devise === 'USD') {
+        montant = montant * DEFAULT_TX_RATE
+      }
+      
+      if (t.type === 'entree') {
+        entreesParCategorie[catName] = (entreesParCategorie[catName] || 0) + montant
+      } else {
+        sortiesParCategorie[catName] = (sortiesParCategorie[catName] || 0) + montant
+      }
+    }
+    
+    // Données pour l'évolution mensuelle (en CDF)
+    const evolutionMensuelle = []
+    const moisTransactions = {}
+    
+    for (const t of transactions) {
+      const date = new Date(t.dateTransaction)
+      const moisKey = `${date.getFullYear()}-${date.getMonth() + 1}`
+      const moisLabel = date.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })
+      let montant = parseFloat(t.montant)
+      
+      if (t.devise === 'USD') {
+        montant = montant * DEFAULT_TX_RATE
+      }
+      
+      if (!moisTransactions[moisKey]) {
+        moisTransactions[moisKey] = { mois: moisLabel, entrees: 0, sorties: 0 }
+      }
+      
+      if (t.type === 'entree') {
+        moisTransactions[moisKey].entrees += montant
+      } else {
+        moisTransactions[moisKey].sorties += montant
+      }
+    }
+    
+    for (const key in moisTransactions) {
+      evolutionMensuelle.push(moisTransactions[key])
+    }
+    evolutionMensuelle.sort((a, b) => {
+      const moisOrder = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+      return moisOrder.indexOf(a.mois.split(' ')[0]) - moisOrder.indexOf(b.mois.split(' ')[0])
+    })
     
     res.json({
       success: true,
       data: {
         periode: { debut: startDate, fin: endDate },
-        devise: devise === 'all' ? 'Toutes devises (CDF équivalent)' : devise,
         tauxChange: DEFAULT_TX_RATE,
-        totalEntrees,
-        totalSorties,
-        solde,
-        tauxCroissance: totalEntrees !== 0 ? ((solde / totalEntrees) * 100).toFixed(2) : 0,
+        statsParDevise,
+        total: {
+          entrees: totalEntreesCDF,
+          sorties: totalSortiesCDF,
+          solde: totalEntreesCDF - totalSortiesCDF
+        },
         entreesParCategorie,
         sortiesParCategorie,
-        statsParDevise,
+        evolutionMensuelle,
         nombreTransactions: {
-          entrees: entrees.length,
-          sorties: sorties.length
+          entrees: transactions.filter(t => t.type === 'entree').length,
+          sorties: transactions.filter(t => t.type === 'sortie').length,
+          parDevise: {
+            USD: statsParDevise.USD.nombre,
+            CDF: statsParDevise.CDF.nombre
+          }
         }
       }
     })
   } catch (error) {
+    console.error('❌ Erreur getFinancialReport:', error)
     logger.error('Erreur getFinancialReport:', error)
-    res.status(500).json({ message: 'Erreur interne du serveur' })
+    res.status(500).json({ message: 'Erreur interne du serveur', error: error.message })
   }
 }

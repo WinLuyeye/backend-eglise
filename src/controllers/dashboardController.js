@@ -1,6 +1,8 @@
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
 
+const TAUX_CHANGE = 2250
+
 /**
  * @desc    Dashboard global (Pasteur, Admin)
  * @route   GET /api/dashboard/global
@@ -28,59 +30,116 @@ export const getGlobalDashboard = async (req, res) => {
       })
     ])
     
-    // Statistiques financières
-    const [entreesMois, sortiesMois, entreesAnnee, sortiesAnnee, topDonateurs] = await Promise.all([
-      prisma.transaction.aggregate({
-        where: { type: 'entree', dateTransaction: { gte: debutMois } },
-        _sum: { montant: true }
-      }),
-      prisma.transaction.aggregate({
-        where: { type: 'sortie', dateTransaction: { gte: debutMois } },
-        _sum: { montant: true }
-      }),
-      prisma.transaction.aggregate({
-        where: { type: 'entree', dateTransaction: { gte: debutAnnee } },
-        _sum: { montant: true }
-      }),
-      prisma.transaction.aggregate({
-        where: { type: 'sortie', dateTransaction: { gte: debutAnnee } },
-        _sum: { montant: true }
-      }),
-      prisma.transaction.groupBy({
-        by: ['membreId'],
-        where: { type: 'entree', membreId: { not: null }, dateTransaction: { gte: debutMois } },
-        _sum: { montant: true },
-        orderBy: { _sum: { montant: 'desc' } },
-        take: 5
-      })
-    ])
+    // Transactions du mois
+    const transactionsMois = await prisma.transaction.findMany({
+      where: {
+        dateTransaction: { gte: debutMois }
+      }
+    })
     
-    // Récupérer les infos des top donateurs
-    const topDonateursDetails = []
-    for (const donateur of topDonateurs) {
+    // Transactions de l'année
+    const transactionsAnnee = await prisma.transaction.findMany({
+      where: {
+        dateTransaction: { gte: debutAnnee }
+      }
+    })
+    
+    // Fonction pour calculer les totaux par devise
+    const calculerTotaux = (transactions) => {
+      let totalUSD = 0
+      let totalCDF = 0
+      
+      transactions.forEach(t => {
+        const montant = parseFloat(t.montant)
+        if (t.devise === 'USD') {
+          totalUSD += montant
+        } else {
+          totalCDF += montant
+        }
+      })
+      
+      const totalCDFEquivalent = totalCDF + (totalUSD * TAUX_CHANGE)
+      
+      return {
+        entrees: transactions.filter(t => t.type === 'entree').reduce((sum, t) => sum + parseFloat(t.montant), 0),
+        sorties: transactions.filter(t => t.type === 'sortie').reduce((sum, t) => sum + parseFloat(t.montant), 0),
+        parDevise: {
+          USD: {
+            entrees: transactions.filter(t => t.type === 'entree' && t.devise === 'USD').reduce((sum, t) => sum + parseFloat(t.montant), 0),
+            sorties: transactions.filter(t => t.type === 'sortie' && t.devise === 'USD').reduce((sum, t) => sum + parseFloat(t.montant), 0)
+          },
+          CDF: {
+            entrees: transactions.filter(t => t.type === 'entree' && t.devise === 'CDF').reduce((sum, t) => sum + parseFloat(t.montant), 0),
+            sorties: transactions.filter(t => t.type === 'sortie' && t.devise === 'CDF').reduce((sum, t) => sum + parseFloat(t.montant), 0)
+          }
+        },
+        totalCDFEquivalent
+      }
+    }
+    
+    const financesMois = calculerTotaux(transactionsMois)
+    const financesAnnee = calculerTotaux(transactionsAnnee)
+    
+    // Statistiques par devise pour l'affichage
+    const statsParDevise = {
+      USD: {
+        entrees: financesAnnee.parDevise.USD.entrees,
+        sorties: financesAnnee.parDevise.USD.sorties,
+        solde: financesAnnee.parDevise.USD.entrees - financesAnnee.parDevise.USD.sorties
+      },
+      CDF: {
+        entrees: financesAnnee.parDevise.CDF.entrees,
+        sorties: financesAnnee.parDevise.CDF.sorties,
+        solde: financesAnnee.parDevise.CDF.entrees - financesAnnee.parDevise.CDF.sorties
+      }
+    }
+    
+    // Top donateurs (toutes devises confondues, converti en CDF)
+    const topDonateursRaw = await prisma.transaction.groupBy({
+      by: ['membreId'],
+      where: {
+        type: 'entree',
+        membreId: { not: null },
+        dateTransaction: { gte: debutAnnee }
+      },
+      _sum: { montant: true }
+    })
+    
+    const topDonateurs = []
+    for (const donateur of topDonateursRaw) {
       if (donateur.membreId) {
         const membre = await prisma.membre.findUnique({
           where: { id: donateur.membreId },
-          select: { nom: true, prenom: true, id: true }
+          select: { id: true, nom: true, prenom: true }
         })
         if (membre) {
-          topDonateursDetails.push({
+          // Récupérer le montant total en CDF pour ce membre
+          const transactionsMembre = await prisma.transaction.findMany({
+            where: {
+              type: 'entree',
+              membreId: donateur.membreId,
+              dateTransaction: { gte: debutAnnee }
+            }
+          })
+          
+          let totalCDF = 0
+          transactionsMembre.forEach(t => {
+            const montant = parseFloat(t.montant)
+            if (t.devise === 'USD') {
+              totalCDF += montant * TAUX_CHANGE
+            } else {
+              totalCDF += montant
+            }
+          })
+          
+          topDonateurs.push({
             ...membre,
-            total: donateur._sum.montant
+            total: totalCDF
           })
         }
       }
     }
-    
-    // Rapports récents
-    const rapportsRecents = await prisma.rapportDepartement.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        departement: { select: { nom: true } },
-        createur: { select: { email: true } }
-      }
-    })
+    topDonateurs.sort((a, b) => b.total - a.total)
     
     // Transactions récentes
     const transactionsRecentes = await prisma.transaction.findMany({
@@ -92,33 +151,47 @@ export const getGlobalDashboard = async (req, res) => {
       }
     })
     
+    // Rapports récents
+    const rapportsRecents = await prisma.rapportDepartement.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        departement: { select: { nom: true } },
+        createur: { select: { email: true } }
+      }
+    })
+    
     // Évolution mensuelle (12 derniers mois)
     const evolutionMensuelle = []
     for (let i = 11; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const finMois = new Date(now.getFullYear(), now.getMonth() - i + 1, 0)
       
-      const entrees = await prisma.transaction.aggregate({
+      const transactionsMois = await prisma.transaction.findMany({
         where: {
-          type: 'entree',
           dateTransaction: { gte: date, lte: finMois }
-        },
-        _sum: { montant: true }
+        }
       })
       
-      const sorties = await prisma.transaction.aggregate({
-        where: {
-          type: 'sortie',
-          dateTransaction: { gte: date, lte: finMois }
-        },
-        _sum: { montant: true }
+      let totalEntrees = 0
+      let totalSorties = 0
+      
+      transactionsMois.forEach(t => {
+        const montant = parseFloat(t.montant)
+        let montantCDF = t.devise === 'USD' ? montant * TAUX_CHANGE : montant
+        
+        if (t.type === 'entree') {
+          totalEntrees += montantCDF
+        } else {
+          totalSorties += montantCDF
+        }
       })
       
       evolutionMensuelle.push({
         mois: date.toLocaleString('fr-FR', { month: 'long', year: 'numeric' }),
-        entrees: entrees._sum.montant || 0,
-        sorties: sorties._sum.montant || 0,
-        solde: (entrees._sum.montant || 0) - (sorties._sum.montant || 0)
+        entrees: totalEntrees,
+        sorties: totalSorties,
+        solde: totalEntrees - totalSorties
       })
     }
     
@@ -134,17 +207,20 @@ export const getGlobalDashboard = async (req, res) => {
         },
         finances: {
           mois: {
-            entrees: entreesMois._sum.montant || 0,
-            sorties: sortiesMois._sum.montant || 0,
-            solde: (entreesMois._sum.montant || 0) - (sortiesMois._sum.montant || 0)
+            entrees: financesMois.entrees,
+            sorties: financesMois.sorties,
+            solde: financesMois.entrees - financesMois.sorties,
+            parDevise: financesMois.parDevise
           },
           annee: {
-            entrees: entreesAnnee._sum.montant || 0,
-            sorties: sortiesAnnee._sum.montant || 0,
-            solde: (entreesAnnee._sum.montant || 0) - (sortiesAnnee._sum.montant || 0)
+            entrees: financesAnnee.entrees,
+            sorties: financesAnnee.sorties,
+            solde: financesAnnee.entrees - financesAnnee.sorties,
+            parDevise: financesAnnee.parDevise,
+            statsParDevise
           }
         },
-        topDonateurs: topDonateursDetails,
+        topDonateurs: topDonateurs.slice(0, 5),
         rapportsRecents,
         transactionsRecentes,
         evolutionMensuelle
@@ -165,69 +241,40 @@ export const getTresorierDashboard = async (req, res) => {
   try {
     const now = new Date()
     const debutMois = new Date(now.getFullYear(), now.getMonth(), 1)
-    const debutSemaine = new Date(now)
-    debutSemaine.setDate(now.getDate() - 7)
     
-    // Totaux par catégorie
-    const [entreesParCategorie, sortiesParCategorie] = await Promise.all([
-      prisma.transaction.groupBy({
-        by: ['categorieId'],
-        where: { type: 'entree', dateTransaction: { gte: debutMois } },
-        _sum: { montant: true }
-      }),
-      prisma.transaction.groupBy({
-        by: ['categorieId'],
-        where: { type: 'sortie', dateTransaction: { gte: debutMois } },
-        _sum: { montant: true }
-      })
-    ])
-    
-    // Récupérer les noms des catégories
-    const categoriesMap = new Map()
-    const allCategorieIds = [...entreesParCategorie.map(e => e.categorieId), ...sortiesParCategorie.map(s => s.categorieId)]
-    const categories = await prisma.categorie.findMany({
-      where: { id: { in: allCategorieIds } }
-    })
-    categories.forEach(c => categoriesMap.set(c.id, c.nom))
-    
-    const entreesDetails = entreesParCategorie.map(e => ({
-      categorie: categoriesMap.get(e.categorieId),
-      total: e._sum.montant
-    }))
-    
-    const sortiesDetails = sortiesParCategorie.map(s => ({
-      categorie: categoriesMap.get(s.categorieId),
-      total: s._sum.montant
-    }))
-    
-    // Dernières transactions
-    const dernieresTransactions = await prisma.transaction.findMany({
-      take: 20,
-      orderBy: { dateTransaction: 'desc' },
+    // Transactions du mois
+    const transactionsMois = await prisma.transaction.findMany({
+      where: {
+        dateTransaction: { gte: debutMois }
+      },
       include: {
         categorie: true,
         membre: { select: { nom: true, prenom: true } }
       }
     })
     
-    // Moyennes
-    const moyenneHebdo = await prisma.transaction.aggregate({
-      where: {
-        dateTransaction: { gte: debutSemaine }
-      },
-      _avg: { montant: true }
+    // Statistiques par catégorie
+    const entreesParCategorie = {}
+    const sortiesParCategorie = {}
+    
+    transactionsMois.forEach(t => {
+      const catName = t.categorie.nom
+      const montant = parseFloat(t.montant)
+      
+      if (t.type === 'entree') {
+        entreesParCategorie[catName] = (entreesParCategorie[catName] || 0) + montant
+      } else {
+        sortiesParCategorie[catName] = (sortiesParCategorie[catName] || 0) + montant
+      }
     })
     
     res.json({
       success: true,
       data: {
-        entreesParCategorie: entreesDetails,
-        sortiesParCategorie: sortiesDetails,
-        dernieresTransactions,
-        moyenneTransaction: moyenneHebdo._avg.montant || 0,
-        nombreTransactionsMois: await prisma.transaction.count({
-          where: { dateTransaction: { gte: debutMois } }
-        })
+        entreesParCategorie,
+        sortiesParCategorie,
+        dernieresTransactions: transactionsMois.slice(0, 10),
+        nombreTransactionsMois: transactionsMois.length
       }
     })
   } catch (error) {
@@ -254,32 +301,14 @@ export const getDepartementDashboard = async (req, res) => {
     
     const departementId = membre.departementId
     
-    // Membres du département
     const membres = await prisma.membre.count({
       where: { departementId }
     })
     
-    // Rapports du département
     const rapports = await prisma.rapportDepartement.findMany({
       where: { departementId },
       orderBy: { periode: 'desc' },
       take: 6
-    })
-    
-    // Dernier rapport
-    const dernierRapport = rapports[0] || null
-    
-    // Activité récente
-    const activitesRecentes = await prisma.logActivite.findMany({
-      where: {
-        tableName: 'rapports_departement',
-        details: { path: ['departementId'], equals: departementId }
-      },
-      take: 10,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        utilisateur: { select: { email: true } }
-      }
     })
     
     res.json({
@@ -288,17 +317,9 @@ export const getDepartementDashboard = async (req, res) => {
         departement: membre.departement,
         statistiques: {
           membres,
-          rapports: await prisma.rapportDepartement.count({ where: { departementId } }),
-          rapportsCetteAnnee: await prisma.rapportDepartement.count({
-            where: {
-              departementId,
-              periode: { gte: new Date(new Date().getFullYear(), 0, 1) }
-            }
-          })
+          rapports: await prisma.rapportDepartement.count({ where: { departementId } })
         },
-        dernierRapport,
-        rapportsRecents: rapports,
-        activitesRecentes
+        rapportsRecents: rapports
       }
     })
   } catch (error) {

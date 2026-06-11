@@ -13,10 +13,17 @@ export const getRapports = async (req, res) => {
     
     let where = {}
     
+    // 🔒 Chef département voit seulement les rapports de son département
     if (req.user.role === 'chef_departement') {
       const membre = await prisma.membre.findUnique({
-        where: { id: req.user.membreId }
+        where: { id: req.user.membreId },
+        include: { departement: true }
       })
+      
+      if (!membre?.departementId) {
+        return res.status(403).json({ message: 'Vous n\'êtes pas assigné à un département' })
+      }
+      
       where.departementId = membre.departementId
     }
     
@@ -33,12 +40,12 @@ export const getRapports = async (req, res) => {
         include: {
           departement: true,
           createur: {
-            select: { email: true }
+            select: { email: true, id: true }
           }
         },
         skip: parseInt(skip),
         take: parseInt(limit),
-        orderBy: { periode: 'desc' }
+        orderBy: { createdAt: 'desc' }
       }),
       prisma.rapportDepartement.count({ where })
     ])
@@ -82,11 +89,14 @@ export const getRapportById = async (req, res) => {
       return res.status(404).json({ message: 'Rapport non trouvé' })
     }
     
+    // 🔒 Chef département ne peut voir que les rapports de son département
     if (req.user.role === 'chef_departement') {
       const membre = await prisma.membre.findUnique({
-        where: { id: req.user.membreId }
+        where: { id: req.user.membreId },
+        include: { departement: true }
       })
-      if (rapport.departementId !== membre.departementId) {
+      
+      if (rapport.departementId !== membre?.departementId) {
         return res.status(403).json({ message: 'Accès non autorisé à ce rapport' })
       }
     }
@@ -111,18 +121,28 @@ export const createRapport = async (req, res) => {
       return res.status(400).json({ message: 'Département, titre et contenu sont requis' })
     }
     
-    // Vérifier que le chef département peut créer pour son département
+    let targetDepartementId = departementId
+    
+    // 🔒 Chef département ne peut créer que pour son département
     if (req.user.role === 'chef_departement') {
       const membre = await prisma.membre.findUnique({
-        where: { id: req.user.membreId }
+        where: { id: req.user.membreId },
+        include: { departement: true }
       })
+      
+      if (!membre?.departementId) {
+        return res.status(403).json({ message: 'Vous n\'êtes pas assigné à un département' })
+      }
+      
       if (departementId !== membre.departementId) {
         return res.status(403).json({ message: 'Vous ne pouvez créer que pour votre département' })
       }
+      
+      targetDepartementId = membre.departementId
     }
     
     const departement = await prisma.departement.findUnique({
-      where: { id: departementId }
+      where: { id: targetDepartementId }
     })
     
     if (!departement) {
@@ -131,7 +151,7 @@ export const createRapport = async (req, res) => {
     
     const rapport = await prisma.rapportDepartement.create({
       data: {
-        departementId,
+        departementId: targetDepartementId,
         titre,
         contenu,
         periode: periode ? new Date(periode) : new Date(),
@@ -148,7 +168,7 @@ export const createRapport = async (req, res) => {
         action: 'CREATE',
         tableName: 'rapports_departement',
         recordId: rapport.id,
-        details: { titre, departementId },
+        details: { titre, departementId: targetDepartementId },
         ipAddress: req.ip
       }
     })
@@ -179,9 +199,15 @@ export const updateRapport = async (req, res) => {
       return res.status(404).json({ message: 'Rapport non trouvé' })
     }
     
-    // Vérifier permission
-    if (req.user.role !== 'administrateur' && rapportExistant.createdBy !== req.user.id) {
-      return res.status(403).json({ message: 'Vous ne pouvez modifier que vos propres rapports' })
+    // 🔒 Chef département ne peut modifier que ses propres rapports
+    if (req.user.role === 'chef_departement' && rapportExistant.createdBy !== req.user.id) {
+      const membre = await prisma.membre.findUnique({
+        where: { id: req.user.membreId }
+      })
+      
+      if (rapportExistant.departementId !== membre?.departementId) {
+        return res.status(403).json({ message: 'Vous ne pouvez modifier que vos propres rapports' })
+      }
     }
     
     const rapport = await prisma.rapportDepartement.update({
@@ -255,6 +281,18 @@ export const getRapportsByDepartement = async (req, res) => {
     const { departementId } = req.params
     const { limit = 12 } = req.query
     
+    // 🔒 Chef département ne peut voir que son département
+    if (req.user.role === 'chef_departement') {
+      const membre = await prisma.membre.findUnique({
+        where: { id: req.user.membreId },
+        include: { departement: true }
+      })
+      
+      if (departementId !== membre?.departementId) {
+        return res.status(403).json({ message: 'Accès non autorisé' })
+      }
+    }
+    
     const rapports = await prisma.rapportDepartement.findMany({
       where: { departementId },
       include: {
@@ -263,7 +301,7 @@ export const getRapportsByDepartement = async (req, res) => {
         }
       },
       take: parseInt(limit),
-      orderBy: { periode: 'desc' }
+      orderBy: { createdAt: 'desc' }
     })
     
     res.json({ success: true, data: rapports })

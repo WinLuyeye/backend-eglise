@@ -13,16 +13,30 @@ export const getMembres = async (req, res) => {
     
     let where = {}
     
-    // Chef département voit seulement son département
+    // 🔒 Chef département voit seulement son département
     if (req.user.role === 'chef_departement') {
       const membre = await prisma.membre.findUnique({
         where: { id: req.user.membreId }
       })
+      
+      if (!membre?.departementId) {
+        return res.status(403).json({ message: 'Vous n\'êtes pas assigné à un département' })
+      }
+      
       where.departementId = membre.departementId
     }
     
+    // 🔒 Le secrétaire ne voit pas les administrateurs
+    if (req.user.role === 'secretaire') {
+      where.utilisateur = {
+        NOT: {
+          role: 'administrateur'
+        }
+      }
+    }
+    
     if (statut) where.statut = statut
-    if (departementId) where.departementId = departementId
+    if (departementId && req.user.role !== 'chef_departement') where.departementId = departementId
     if (search) {
       where.OR = [
         { nom: { contains: search, mode: 'insensitive' } },
@@ -102,6 +116,11 @@ export const getMembreById = async (req, res) => {
       }
     }
     
+    // 🔒 Le secrétaire ne peut pas voir un administrateur
+    if (req.user.role === 'secretaire' && membre.utilisateur?.role === 'administrateur') {
+      return res.status(403).json({ message: 'Accès non autorisé' })
+    }
+    
     res.json({ success: true, data: membre })
   } catch (error) {
     logger.error('Erreur getMembreById:', error)
@@ -171,6 +190,17 @@ export const updateMembre = async (req, res) => {
       return res.status(404).json({ message: 'Membre non trouvé' })
     }
     
+    // 🔒 Le secrétaire ne peut pas modifier un administrateur
+    if (req.user.role === 'secretaire') {
+      const membreWithUser = await prisma.membre.findUnique({
+        where: { id },
+        include: { utilisateur: true }
+      })
+      if (membreWithUser?.utilisateur?.role === 'administrateur') {
+        return res.status(403).json({ message: 'Vous ne pouvez pas modifier un administrateur' })
+      }
+    }
+    
     const membre = await prisma.membre.update({
       where: { id },
       data: {
@@ -209,7 +239,7 @@ export const updateMembre = async (req, res) => {
 }
 
 /**
- * @desc    Supprimer un membre (soft delete ou delete)
+ * @desc    Supprimer un membre
  * @route   DELETE /api/membres/:id
  * @access  Private (Admin seulement)
  */
