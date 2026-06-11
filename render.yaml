@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: backend-eglise
+    runtime: node
+    repo: https://github.com/votre-repo/backend-eglise
+    plan: free
+    region: frankfurt
+    buildCommand: npm install && npx prisma generate
+    startCommand: node server.js
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
