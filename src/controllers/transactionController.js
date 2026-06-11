@@ -1,6 +1,21 @@
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
 
+// Taux de change par défaut (1 USD = 2250 CDF)
+const DEFAULT_TX_RATE = 2250
+
+// Fonction pour convertir les montants
+const convertirMontant = (montant, deviseSource, deviseCible, tauxChange = DEFAULT_TX_RATE) => {
+  if (deviseSource === deviseCible) return montant
+  
+  if (deviseSource === 'USD' && deviseCible === 'CDF') {
+    return montant * tauxChange
+  } else if (deviseSource === 'CDF' && deviseCible === 'USD') {
+    return montant / tauxChange
+  }
+  return montant
+}
+
 /**
  * @desc    Obtenir toutes les transactions
  * @route   GET /api/transactions
@@ -15,7 +30,8 @@ export const getTransactions = async (req, res) => {
       categorieId, 
       dateDebut, 
       dateFin,
-      membreId 
+      membreId,
+      devise
     } = req.query
     const skip = (page - 1) * limit
     
@@ -23,6 +39,7 @@ export const getTransactions = async (req, res) => {
     if (type) where.type = type
     if (categorieId) where.categorieId = categorieId
     if (membreId) where.membreId = membreId
+    if (devise) where.devise = devise
     if (dateDebut || dateFin) {
       where.dateTransaction = {}
       if (dateDebut) where.dateTransaction.gte = new Date(dateDebut)
@@ -48,8 +65,9 @@ export const getTransactions = async (req, res) => {
       prisma.transaction.count({ where })
     ])
     
-    // Calculer les totaux
-    const totals = await prisma.transaction.aggregate({
+    // Calculer les totaux par devise
+    const totalsByDevise = await prisma.transaction.groupBy({
+      by: ['devise'],
       where,
       _sum: { montant: true }
     })
@@ -59,7 +77,8 @@ export const getTransactions = async (req, res) => {
       data: transactions,
       totals: {
         totalEntrees: type === 'entree' || !type ? totals._sum.montant : null,
-        totalSorties: type === 'sortie' || !type ? totals._sum.montant : null
+        totalSorties: type === 'sortie' || !type ? totals._sum.montant : null,
+        parDevise: totalsByDevise
       },
       pagination: {
         page: parseInt(page),
@@ -114,10 +133,10 @@ export const getTransactionById = async (req, res) => {
  */
 export const createTransaction = async (req, res) => {
   try {
-    const { type, categorieId, membreId, montant, dateTransaction, description, justificatif } = req.body
+    const { type, categorieId, membreId, montant, devise, dateTransaction, description, justificatif } = req.body
     
-    if (!type || !categorieId || !montant) {
-      return res.status(400).json({ message: 'Type, catégorie et montant sont requis' })
+    if (!type || !categorieId || !montant || !devise) {
+      return res.status(400).json({ message: 'Type, catégorie, montant et devise sont requis' })
     }
     
     if (type === 'entree' && !membreId) {
@@ -126,6 +145,10 @@ export const createTransaction = async (req, res) => {
     
     if (montant <= 0) {
       return res.status(400).json({ message: 'Le montant doit être supérieur à 0' })
+    }
+    
+    if (!['USD', 'CDF'].includes(devise)) {
+      return res.status(400).json({ message: 'Devise invalide. Utilisez USD ou CDF' })
     }
     
     // Vérifier que la catégorie existe et correspond au type
@@ -143,12 +166,21 @@ export const createTransaction = async (req, res) => {
       })
     }
     
+    // Calculer les montants convertis
+    const tauxChange = DEFAULT_TX_RATE
+    const montantUSD = devise === 'USD' ? montant : convertirMontant(montant, 'CDF', 'USD', tauxChange)
+    const montantCDF = devise === 'CDF' ? montant : convertirMontant(montant, 'USD', 'CDF', tauxChange)
+    
     const transaction = await prisma.transaction.create({
       data: {
         type,
         categorieId,
         membreId: membreId || null,
         montant: parseFloat(montant),
+        devise,
+        tauxChange,
+        montantUSD,
+        montantCDF,
         dateTransaction: dateTransaction ? new Date(dateTransaction) : new Date(),
         description,
         justificatif,
@@ -168,12 +200,12 @@ export const createTransaction = async (req, res) => {
         action: 'CREATE',
         tableName: 'transactions',
         recordId: transaction.id,
-        details: { type, montant, description },
+        details: { type, montant, devise, description },
         ipAddress: req.ip
       }
     })
     
-    logger.info(`💰 ${type === 'entree' ? 'Entrée' : 'Sortie'} créée: ${montant} FCFA par ${req.user.email}`)
+    logger.info(`💰 ${type === 'entree' ? 'Entrée' : 'Sortie'} créée: ${montant} ${devise} par ${req.user.email}`)
     res.status(201).json({ success: true, data: transaction, message: 'Transaction enregistrée avec succès' })
   } catch (error) {
     logger.error('Erreur createTransaction:', error)
@@ -189,7 +221,7 @@ export const createTransaction = async (req, res) => {
 export const updateTransaction = async (req, res) => {
   try {
     const { id } = req.params
-    const { type, categorieId, membreId, montant, dateTransaction, description, justificatif } = req.body
+    const { type, categorieId, membreId, montant, devise, dateTransaction, description, justificatif } = req.body
     
     const transactionExistant = await prisma.transaction.findUnique({
       where: { id }
@@ -208,13 +240,34 @@ export const updateTransaction = async (req, res) => {
       }
     }
     
+    // Recalculer les montants convertis si devise ou montant change
+    let montantUSD = transactionExistant.montantUSD
+    let montantCDF = transactionExistant.montantCDF
+    let newDevise = devise || transactionExistant.devise
+    let newMontant = montant ? parseFloat(montant) : transactionExistant.montant
+    
+    if (devise !== transactionExistant.devise || montant) {
+      const tauxChange = DEFAULT_TX_RATE
+      if (newDevise === 'USD') {
+        montantUSD = newMontant
+        montantCDF = convertirMontant(newMontant, 'USD', 'CDF', tauxChange)
+      } else {
+        montantUSD = convertirMontant(newMontant, 'CDF', 'USD', tauxChange)
+        montantCDF = newMontant
+      }
+    }
+    
     const transaction = await prisma.transaction.update({
       where: { id },
       data: {
         type: type || transactionExistant.type,
         categorieId: categorieId || transactionExistant.categorieId,
         membreId: membreId !== undefined ? membreId : transactionExistant.membreId,
-        montant: montant ? parseFloat(montant) : transactionExistant.montant,
+        montant: newMontant,
+        devise: newDevise,
+        tauxChange: DEFAULT_TX_RATE,
+        montantUSD,
+        montantCDF,
         dateTransaction: dateTransaction ? new Date(dateTransaction) : transactionExistant.dateTransaction,
         description: description !== undefined ? description : transactionExistant.description,
         justificatif: justificatif !== undefined ? justificatif : transactionExistant.justificatif
@@ -269,7 +322,7 @@ export const deleteTransaction = async (req, res) => {
         action: 'DELETE',
         tableName: 'transactions',
         recordId: id,
-        details: { montant: transaction.montant, type: transaction.type },
+        details: { montant: transaction.montant, type: transaction.type, devise: transaction.devise },
         ipAddress: req.ip
       }
     })
@@ -283,13 +336,13 @@ export const deleteTransaction = async (req, res) => {
 }
 
 /**
- * @desc    Rapport financier
+ * @desc    Rapport financier avec gestion des devises
  * @route   GET /api/transactions/report/summary
  * @access  Private (Pasteur, Tresorier, Admin)
  */
 export const getFinancialReport = async (req, res) => {
   try {
-    const { periode = 'month', dateDebut, dateFin } = req.query
+    const { periode = 'month', dateDebut, dateFin, devise = 'CDF' } = req.query
     
     let startDate, endDate
     
@@ -327,35 +380,79 @@ export const getFinancialReport = async (req, res) => {
       }
     })
     
-    const entrees = transactions.filter(t => t.type === 'entree')
-    const sorties = transactions.filter(t => t.type === 'sortie')
+    // Filtrer par devise si spécifiée
+    const filteredTransactions = devise === 'all' ? transactions : transactions.filter(t => t.devise === devise)
     
-    const totalEntrees = entrees.reduce((sum, t) => sum + parseFloat(t.montant), 0)
-    const totalSorties = sorties.reduce((sum, t) => sum + parseFloat(t.montant), 0)
+    const entrees = filteredTransactions.filter(t => t.type === 'entree')
+    const sorties = filteredTransactions.filter(t => t.type === 'sortie')
+    
+    // Calculer les totaux dans la devise demandée
+    let totalEntrees = 0
+    let totalSorties = 0
+    
+    if (devise === 'all') {
+      // Convertir tous les montants en CDF pour le total général
+      entrees.forEach(t => {
+        totalEntrees += t.devise === 'USD' ? convertirMontant(t.montant, 'USD', 'CDF') : t.montant
+      })
+      sorties.forEach(t => {
+        totalSorties += t.devise === 'USD' ? convertirMontant(t.montant, 'USD', 'CDF') : t.montant
+      })
+    } else {
+      totalEntrees = entrees.reduce((sum, t) => sum + parseFloat(t.montant), 0)
+      totalSorties = sorties.reduce((sum, t) => sum + parseFloat(t.montant), 0)
+    }
+    
     const solde = totalEntrees - totalSorties
     
     const entreesParCategorie = {}
     entrees.forEach(t => {
       const catName = t.categorie.nom
-      entreesParCategorie[catName] = (entreesParCategorie[catName] || 0) + parseFloat(t.montant)
+      let montant = parseFloat(t.montant)
+      if (devise === 'all' && t.devise === 'USD') {
+        montant = convertirMontant(montant, 'USD', 'CDF')
+      }
+      entreesParCategorie[catName] = (entreesParCategorie[catName] || 0) + montant
     })
     
     const sortiesParCategorie = {}
     sorties.forEach(t => {
       const catName = t.categorie.nom
-      sortiesParCategorie[catName] = (sortiesParCategorie[catName] || 0) + parseFloat(t.montant)
+      let montant = parseFloat(t.montant)
+      if (devise === 'all' && t.devise === 'USD') {
+        montant = convertirMontant(montant, 'USD', 'CDF')
+      }
+      sortiesParCategorie[catName] = (sortiesParCategorie[catName] || 0) + montant
     })
+    
+    // Statistiques par devise
+    const statsParDevise = {
+      USD: {
+        entrees: transactions.filter(t => t.type === 'entree' && t.devise === 'USD').reduce((sum, t) => sum + parseFloat(t.montant), 0),
+        sorties: transactions.filter(t => t.type === 'sortie' && t.devise === 'USD').reduce((sum, t) => sum + parseFloat(t.montant), 0),
+      },
+      CDF: {
+        entrees: transactions.filter(t => t.type === 'entree' && t.devise === 'CDF').reduce((sum, t) => sum + parseFloat(t.montant), 0),
+        sorties: transactions.filter(t => t.type === 'sortie' && t.devise === 'CDF').reduce((sum, t) => sum + parseFloat(t.montant), 0),
+      }
+    }
+    
+    statsParDevise.USD.solde = statsParDevise.USD.entrees - statsParDevise.USD.sorties
+    statsParDevise.CDF.solde = statsParDevise.CDF.entrees - statsParDevise.CDF.sorties
     
     res.json({
       success: true,
       data: {
         periode: { debut: startDate, fin: endDate },
+        devise: devise === 'all' ? 'Toutes devises (CDF équivalent)' : devise,
+        tauxChange: DEFAULT_TX_RATE,
         totalEntrees,
         totalSorties,
         solde,
-        tauxCroissance: solde !== 0 ? ((solde / totalEntrees) * 100).toFixed(2) : 0,
+        tauxCroissance: totalEntrees !== 0 ? ((solde / totalEntrees) * 100).toFixed(2) : 0,
         entreesParCategorie,
         sortiesParCategorie,
+        statsParDevise,
         nombreTransactions: {
           entrees: entrees.length,
           sorties: sorties.length

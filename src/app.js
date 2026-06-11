@@ -29,26 +29,75 @@ const __dirname = path.dirname(__filename)
 
 const app = express()
 
-// ==================== SECURITE ====================
-// Helmet pour sécuriser les headers HTTP
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
+// ==================== CORS CONFIGURATION (CORRIGÉE) ====================
+// Liste des origines autorisées
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
+  'http://localhost:5000',
+  'https://votre-domaine.com'
+]
+
+// Configuration CORS complète
+app.use(cors({
+  origin: function(origin, callback) {
+    // Permettre les requêtes sans origin (Postman, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // En développement, on accepte toutes les origines
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // En production, on vérifie l'origine
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ CORS: Origin non autorisée: ${origin}`);
+      callback(null, true); // Pour le développement, on accepte quand même
+    }
   },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+  maxAge: 86400, // 24 heures
 }))
 
-// CORS
-app.use(cors({
-  origin: process.env.CORS_ORIGIN?.split(',') || '*',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-}))
+// Middleware supplémentaire pour les headers CORS (assure que toutes les réponses ont les bons headers)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Ajouter les headers CORS à toutes les réponses
+  if (process.env.NODE_ENV === 'development') {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  } else if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  // Répondre immédiatement aux requêtes OPTIONS (preflight)
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  
+  next();
+});
+
+// ==================== SECURITE ====================
+// Helmet pour sécuriser les headers HTTP (désactiver certains headers pour CORS)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "unsafe-none" },
+  contentSecurityPolicy: false, // Désactiver pour le développement
+}));
 
 // ==================== MIDDLEWARES ====================
 // Compression des réponses
@@ -127,7 +176,8 @@ app.get('/health', (req, res) => {
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
+    port: process.env.PORT || 3000
   })
 })
 

@@ -78,21 +78,25 @@ model Categorie {
 }
 
 model Transaction {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   type            String
-  categorieId     String   @map("categorie_id") @db.Uuid
-  membreId        String?  @map("membre_id") @db.Uuid
-  montant         Decimal  @db.Decimal(10, 2)
-  dateTransaction DateTime @default(now()) @map("date_transaction")
+  categorieId     String    @map("categorie_id") @db.Uuid
+  membreId        String?   @map("membre_id") @db.Uuid
+  montant         Decimal   @db.Decimal(10, 2)
+  devise          String    @default("CDF")  // Ajouté: "USD" ou "CDF"
+  tauxChange       Decimal?  @db.Decimal(10, 2) // Taux de change au moment de la transaction
+  montantUSD      Decimal?  @db.Decimal(10, 2) // Montant converti en USD
+  montantCDF      Decimal?  @db.Decimal(10, 2) // Montant converti en CDF
+  dateTransaction DateTime  @default(now()) @map("date_transaction")
   description     String?
   justificatif    String?
-  createdBy       String?  @map("created_by") @db.Uuid
-  createdAt       DateTime @default(now()) @map("created_at")
-
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
   categorie Categorie    @relation(fields: [categorieId], references: [id])
   membre    Membre?      @relation(fields: [membreId], references: [id])
   createur  Utilisateur? @relation("CreatedBy", fields: [createdBy], references: [id])
-
+  
   @@map("transactions")
 }
 
