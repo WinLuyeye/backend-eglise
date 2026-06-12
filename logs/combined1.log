@@ -35028,3 +35028,31 @@
 {"level":"info","message":"🌐 Port: 5000","timestamp":"2026-06-12 00:29:39:2939"}
 {"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-06-12 00:29:39:2939"}
 {"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-12 00:29:39:2939"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-06-12 00:30:13:3013"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"error","message":"Prisma Error: \nInvalid `prisma.utilisateur.findUnique()` invocation:\n\n\nCan't reach database server at `aws-0-eu-west-1.pooler.supabase.com:5432`\n\nPlease make sure your database server is running at `aws-0-eu-west-1.pooler.supabase.com:5432`.","timestamp":"2026-06-12 00:31:09:319"}
+{"level":"info","message":"✅ Connexion réussie: chefdep@eglise.com (chef_departement)","timestamp":"2026-06-12 00:31:54:3154"}
+{"level":"info","message":"✅ Connexion réussie: admin@eglise.com (administrateur)","timestamp":"2026-06-12 00:33:17:3317"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-06-12 00:43:57:4357"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"SIGINT reçu. Fermeture gracieuse...","timestamp":"2026-06-12 00:44:51:4451"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"SIGINT reçu. Fermeture gracieuse...","timestamp":"2026-06-12 02:47:39:4739"}
+{"level":"info","message":"Serveur HTTP fermé","timestamp":"2026-06-12 02:47:39:4739"}
+{"level":"info","message":"Base de données déconnectée","timestamp":"2026-06-12 02:47:39:4739"}

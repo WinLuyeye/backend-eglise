@@ -38773,3 +38773,91 @@
 {"level":"info","message":"🌐 Port: 5000","timestamp":"2026-06-12 00:29:39:2939"}
 {"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-06-12 00:29:39:2939"}
 {"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-12 00:29:39:2939"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-06-12 00:30:13:3013"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-12 00:30:14:3014"}
+{"level":"http","message":"GET /api/membres?page=1&limit=20&search=&statut= 403 - 1647ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:30:41:3041"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:30:41 +0000] \"GET /api/membres?page=1&limit=20&search=&statut= HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:30:41:3041"}
+{"level":"http","message":"GET /api/membres?page=1&limit=20&search=&statut= 403 - 548ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:30:41:3041"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:30:41 +0000] \"GET /api/membres?page=1&limit=20&search=&statut= HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:30:41:3041"}
+{"level":"http","message":"GET /api/membres?page=1&limit=20 403 - 3715ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:30:43:3043"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:30:43 +0000] \"GET /api/membres?page=1&limit=20 HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:30:43:3043"}
+{"level":"http","message":"GET /api/membres?page=1&limit=20 403 - 3714ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:30:43:3043"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:30:43 +0000] \"GET /api/membres?page=1&limit=20 HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:30:43:3043"}
+{"level":"http","message":"GET /api/membres?page=1&limit=20 403 - 1207ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:31:05:315"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:31:05 +0000] \"GET /api/membres?page=1&limit=20 HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:31:05:315"}
+{"level":"http","message":"GET /api/membres?page=1&limit=20 403 - 1317ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:31:05:315"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:31:05 +0000] \"GET /api/membres?page=1&limit=20 HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:31:05:315"}
+{"level":"http","message":"GET /api/membres/31b167ca-d7ac-4502-b9a7-b241dbbe4669 200 - 4788ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:31:09:319"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:31:09 +0000] \"GET /api/membres/31b167ca-d7ac-4502-b9a7-b241dbbe4669 HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:31:09:319"}
+{"level":"error","message":"Prisma Error: \nInvalid `prisma.utilisateur.findUnique()` invocation:\n\n\nCan't reach database server at `aws-0-eu-west-1.pooler.supabase.com:5432`\n\nPlease make sure your database server is running at `aws-0-eu-west-1.pooler.supabase.com:5432`.","timestamp":"2026-06-12 00:31:09:319"}
+{"level":"http","message":"GET /api/membres/31b167ca-d7ac-4502-b9a7-b241dbbe4669 401 - 5032ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:31:09:319"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:31:09 +0000] \"GET /api/membres/31b167ca-d7ac-4502-b9a7-b241dbbe4669 HTTP/1.1\" 401 45 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:31:09:319"}
+{"level":"info","message":"✅ Connexion réussie: chefdep@eglise.com (chef_departement)","timestamp":"2026-06-12 00:31:54:3154"}
+{"level":"http","message":"POST /api/auth/login 200 - 3579ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:31:54:3154"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:31:54 +0000] \"POST /api/auth/login HTTP/1.1\" 200 498 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:31:54:3154"}
+{"level":"http","message":"GET /api/rapports?page=1&limit=10 403 - 572ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:31:54:3154"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:31:54 +0000] \"GET /api/rapports?page=1&limit=10 HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:31:54:3154"}
+{"level":"http","message":"GET /api/rapports?page=1&limit=10 403 - 929ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:31:55:3155"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:31:55 +0000] \"GET /api/rapports?page=1&limit=10 HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:31:55:3155"}
+{"level":"http","message":"GET /api/membres?page=1&limit=20&search=&statut= 403 - 597ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:32:01:321"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:32:01 +0000] \"GET /api/membres?page=1&limit=20&search=&statut= HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:32:01:321"}
+{"level":"http","message":"GET /api/membres?page=1&limit=50 403 - 622ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:32:01:321"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:32:01 +0000] \"GET /api/membres?page=1&limit=50 HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:32:01:321"}
+{"level":"http","message":"GET /api/membres?page=1&limit=20&search=&statut= 403 - 909ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:32:01:321"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:32:01 +0000] \"GET /api/membres?page=1&limit=20&search=&statut= HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:32:01:321"}
+{"level":"http","message":"GET /api/membres?page=1&limit=50 403 - 872ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:32:02:322"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:32:02 +0000] \"GET /api/membres?page=1&limit=50 HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:32:02:322"}
+{"level":"http","message":"GET /api/rapports?page=1&limit=10&search=&periodeDebut=&periodeFin= 403 - 587ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:32:04:324"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:32:04 +0000] \"GET /api/rapports?page=1&limit=10&search=&periodeDebut=&periodeFin= HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:32:04:324"}
+{"level":"http","message":"GET /api/rapports?page=1&limit=10&search=&periodeDebut=&periodeFin= 403 - 598ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:32:04:324"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:32:04 +0000] \"GET /api/rapports?page=1&limit=10&search=&periodeDebut=&periodeFin= HTTP/1.1\" 403 58 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:32:04:324"}
+{"level":"info","message":"✅ Connexion réussie: admin@eglise.com (administrateur)","timestamp":"2026-06-12 00:33:17:3317"}
+{"level":"http","message":"POST /api/auth/login 200 - 2786ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:17:3317"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:17 +0000] \"POST /api/auth/login HTTP/1.1\" 200 466 \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:17:3317"}
+{"level":"http","message":"GET /api/membres?page=1&limit=50 200 - 3299ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:20:3320"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:20 +0000] \"GET /api/membres?page=1&limit=50 HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:20:3320"}
+{"level":"http","message":"GET /api/membres?page=1&limit=50 200 - 4538ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:22:3322"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:22 +0000] \"GET /api/membres?page=1&limit=50 HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:22:3322"}
+{"level":"http","message":"GET /api/membres?page=1&limit=5 304 - 1495ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:23:3323"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:23 +0000] \"GET /api/membres?page=1&limit=5 HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:23:3323"}
+{"level":"http","message":"GET /api/transactions?page=1&limit=50 304 - 6880ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:24:3324"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:24 +0000] \"GET /api/transactions?page=1&limit=50 HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:24:3324"}
+{"level":"http","message":"GET /api/transactions?page=1&limit=50 200 - 3977ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:24:3324"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:24 +0000] \"GET /api/transactions?page=1&limit=50 HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:24:3324"}
+{"level":"http","message":"GET /api/transactions/report/summary?periode=year 200 - 2436ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:26:3326"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:26 +0000] \"GET /api/transactions/report/summary?periode=year HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:26:3326"}
+{"level":"http","message":"GET /api/membres?page=1&limit=5 200 - 1674ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:26:3326"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:26 +0000] \"GET /api/membres?page=1&limit=5 HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:26:3326"}
+{"level":"http","message":"GET /api/transactions/report/summary?periode=year 200 - 2400ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:28:3328"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:28 +0000] \"GET /api/transactions/report/summary?periode=year HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:28:3328"}
+{"level":"http","message":"GET /api/dashboard/global 200 - 14378ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:32:3332"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:32 +0000] \"GET /api/dashboard/global HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:32:3332"}
+{"level":"http","message":"GET /api/dashboard/global 304 - 17224ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:34:3334"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:34 +0000] \"GET /api/dashboard/global HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:34:3334"}
+{"level":"http","message":"GET /api/dashboard/global 200 - 17446ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:35:3335"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:35 +0000] \"GET /api/dashboard/global HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:35:3335"}
+{"level":"http","message":"GET /api/dashboard/global 200 - 13001ms - ::ffff:127.0.0.1","timestamp":"2026-06-12 00:33:37:3337"}
+{"level":"http","message":"::ffff:127.0.0.1 - - [11/Jun/2026:23:33:37 +0000] \"GET /api/dashboard/global HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:151.0) Gecko/20100101 Firefox/151.0\"","timestamp":"2026-06-12 00:33:37:3337"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-06-12 00:43:57:4357"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-12 00:43:58:4358"}
+{"level":"info","message":"SIGINT reçu. Fermeture gracieuse...","timestamp":"2026-06-12 00:44:51:4451"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-12 02:43:04:434"}
+{"level":"info","message":"SIGINT reçu. Fermeture gracieuse...","timestamp":"2026-06-12 02:47:39:4739"}
+{"level":"info","message":"Serveur HTTP fermé","timestamp":"2026-06-12 02:47:39:4739"}
+{"level":"info","message":"Base de données déconnectée","timestamp":"2026-06-12 02:47:39:4739"}
