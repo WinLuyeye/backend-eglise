@@ -12,11 +12,7 @@ const __dirname = path.dirname(__filename)
 dotenv.config()
 
 const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL_LOCAL || process.env.DATABASE_URL || 'postgresql://postgres:Winner1@localhost:5432/eglise_local',
-    },
-  },
+  datasourceUrl: process.env.DATABASE_URL_LOCAL || process.env.DATABASE_URL || 'postgresql://postgres:Winner1@localhost:5432/eglise_local'
 })
 
 // Configuration des utilisateurs
@@ -76,29 +72,29 @@ async function createUser(userData) {
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(userData.password, 10)
 
-    // Créer le membre associé
+    // Créer le membre associé (avec les bons noms de champs en camelCase)
     const membre = await prisma.membre.create({
       data: {
         nom: userData.nom,
         prenom: userData.prenom,
         email: userData.email,
         statut: 'actif',
-        date_inscription: new Date(),
-        created_at: new Date(),
-        updated_at: new Date()
+        dateInscription: new Date(), // Correction: camelCase
+        createdAt: new Date(),       // Correction: camelCase
+        updatedAt: new Date()        // Correction: camelCase
       }
     })
     console.log(`   ✅ Membre créé: ${membre.nom} ${membre.prenom}`)
 
-    // Créer l'utilisateur
+    // Créer l'utilisateur (avec les bons noms de champs en camelCase)
     const utilisateur = await prisma.utilisateur.create({
       data: {
         email: userData.email,
-        mot_de_passe: hashedPassword,
+        motDePasse: hashedPassword,  // Correction: camelCase
         role: userData.role,
-        membre_id: membre.id,
+        membreId: membre.id,         // Correction: camelCase
         actif: true,
-        created_at: new Date()
+        createdAt: new Date()        // Correction: camelCase
       }
     })
     console.log(`   ✅ Utilisateur créé: ${utilisateur.email} (${utilisateur.role})`)
@@ -242,7 +238,7 @@ async function deleteAllUsers() {
       process.exit(0)
     }
 
-    // Supprimer les utilisateurs (les membres seront supprimés automatiquement grâce à ON DELETE CASCADE)
+    // Supprimer les utilisateurs
     const deletedUsers = await prisma.$executeRawUnsafe(`
       DELETE FROM public.utilisateurs 
       WHERE email = ANY($1)

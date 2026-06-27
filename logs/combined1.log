@@ -35447,3 +35447,10 @@
 {"level":"info","message":"🌐 Port: 5000","timestamp":"2026-06-27 13:29:42:2942"}
 {"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-06-27 13:29:42:2942"}
 {"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-27 13:29:42:2942"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-06-27 13:30:13:3013"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-06-27 13:30:13:3013"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-06-27 13:30:13:3013"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-06-27 13:30:13:3013"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-06-27 13:30:13:3013"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-06-27 13:30:13:3013"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-27 13:30:13:3013"}
