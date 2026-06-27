@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "exportedAt": "2026-06-27T12:22:03.424Z",
+    "version": "1.0.0",
+    "tables": [
+      "categories",
+      "membres",
+      "departements",
+      "utilisateurs",
+      "transactions",
+      "rapports_departement",
+      "logs_activites"
+    ],
+    "totalRecords": 0
+  },
+  "data": {
+    "categories": [],
+    "membres": [],
+    "departements": [],
+    "utilisateurs": [],
+    "transactions": [],
+    "rapports_departement": [],
+    "logs_activites": []
+  }
+}
