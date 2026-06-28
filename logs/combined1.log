@@ -36094,3 +36094,18 @@
 {"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-28 17:44:25:4425"}
 {"level":"info","message":"💰 Entrée créée: 5000 CDF par jean.dupont@email.com","timestamp":"2026-06-28 17:44:41:4441"}
 {"level":"info","message":"💰 Entrée créée: 10 USD par jean.dupont@email.com","timestamp":"2026-06-28 17:46:02:462"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-06-28 17:49:47:4947"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-06-28 17:49:47:4947"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-06-28 17:49:47:4947"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-06-28 17:49:47:4947"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-06-28 17:49:47:4947"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-06-28 17:49:47:4947"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-06-28 17:49:47:4947"}
+{"level":"info","message":"💰 Sortie créée: 1000 CDF par jean.dupont@email.com","timestamp":"2026-06-28 17:50:47:5047"}
+{"level":"info","message":"💰 Sortie créée: 1 USD par jean.dupont@email.com","timestamp":"2026-06-28 17:51:12:5112"}
+{"level":"info","message":"💰 Sortie créée: 2 USD par jean.dupont@email.com","timestamp":"2026-06-28 17:53:28:5328"}
+{"level":"info","message":"📂 Catégorie créée: offrande du prophete (entree) par jean.dupont@email.com","timestamp":"2026-06-28 17:55:54:5554"}
+{"level":"info","message":"✏️ Catégorie modifiée: 9f59b7fc-6a38-4259-9b6b-01f4c75aeffb par jean.dupont@email.com","timestamp":"2026-06-28 17:56:11:5611"}
+{"level":"info","message":"✏️ Catégorie modifiée: c4563e56-81c0-49f7-b5fa-31d2eddc813d par jean.dupont@email.com","timestamp":"2026-06-28 17:56:21:5621"}
+{"level":"info","message":"✏️ Département modifié: 7b6cd85f-a136-4ad6-a61c-d1f13042b798 par jean.dupont@email.com","timestamp":"2026-06-28 18:06:10:610"}
+{"level":"info","message":"🏢 Département créé: louage par jean.dupont@email.com","timestamp":"2026-06-28 18:06:41:641"}
