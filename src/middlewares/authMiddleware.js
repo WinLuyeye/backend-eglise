@@ -43,6 +43,7 @@ export const verifyToken = async (req, res, next) => {
     })
   }
 }
+
 export const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization
@@ -59,6 +60,33 @@ export const optionalAuth = async (req, res, next) => {
     }
     next()
   } catch (error) {
+    next()
+  }
+}
+
+// ✅ AJOUT: Middleware pour vérifier les rôles
+export const authorize = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Non authentifié'
+      })
+    }
+    
+    // Convertir les rôles en majuscules pour la comparaison
+    const userRole = req.user.role.toUpperCase()
+    const allowedRoles = roles.map(r => r.toUpperCase())
+    
+    if (!allowedRoles.includes(userRole)) {
+      console.log(`❌ Rôle non autorisé: ${userRole} - Requis: ${allowedRoles.join(', ')}`)
+      return res.status(403).json({
+        success: false,
+        message: `Accès refusé. Rôle requis: ${roles.join(', ')}`
+      })
+    }
+    
+    console.log(`✅ Rôle autorisé: ${userRole}`)
     next()
   }
 }

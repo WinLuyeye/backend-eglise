@@ -1,0 +1,147 @@
+{
+  "metadata": {
+    "exportedAt": "2026-06-27T13:02:26.136Z",
+    "version": "1.0.0",
+    "tables": [
+      "categories",
+      "membres",
+      "departements",
+      "utilisateurs",
+      "transactions",
+      "rapports_departement",
+      "logs_activites"
+    ],
+    "totalRecords": 10
+  },
+  "data": {
+    "categories": [],
+    "membres": [
+      {
+        "id": "235068bc-763b-4c88-9f85-98fa6230d62e",
+        "nom": "Admin",
+        "prenom": "Principal",
+        "email": "admin@user.com",
+        "telephone": null,
+        "adresse": null,
+        "date_naissance": null,
+        "date_inscription": "2026-06-27T12:38:02.595Z",
+        "statut": "actif",
+        "departement_id": null,
+        "created_at": "2026-06-27T12:38:02.595Z",
+        "updated_at": "2026-06-27T12:38:02.595Z"
+      },
+      {
+        "id": "84061cce-0d00-446e-875c-26ba40fffc54",
+        "nom": "Pasteur",
+        "prenom": "Jean",
+        "email": "pasteur@user.com",
+        "telephone": null,
+        "adresse": null,
+        "date_naissance": null,
+        "date_inscription": "2026-06-27T12:38:04.176Z",
+        "statut": "actif",
+        "departement_id": null,
+        "created_at": "2026-06-27T12:38:04.176Z",
+        "updated_at": "2026-06-27T12:38:04.176Z"
+      },
+      {
+        "id": "74d67e7d-cd0d-4f36-aae5-75f980560249",
+        "nom": "Secrétaire",
+        "prenom": "Marie",
+        "email": "secretaire@user.com",
+        "telephone": null,
+        "adresse": null,
+        "date_naissance": null,
+        "date_inscription": "2026-06-27T12:38:05.059Z",
+        "statut": "actif",
+        "departement_id": null,
+        "created_at": "2026-06-27T12:38:05.059Z",
+        "updated_at": "2026-06-27T12:38:05.059Z"
+      },
+      {
+        "id": "59a4dbf5-0f22-4f56-b94b-ddd5eda11490",
+        "nom": "Trésorier",
+        "prenom": "Pierre",
+        "email": "tresorier@user.com",
+        "telephone": null,
+        "adresse": null,
+        "date_naissance": null,
+        "date_inscription": "2026-06-27T12:38:05.986Z",
+        "statut": "actif",
+        "departement_id": null,
+        "created_at": "2026-06-27T12:38:05.986Z",
+        "updated_at": "2026-06-27T12:38:05.986Z"
+      },
+      {
+        "id": "ffbd3a3a-b40e-42e3-b154-f9179e2a444c",
+        "nom": "Chef",
+        "prenom": "Departement",
+        "email": "chefdep@user.com",
+        "telephone": null,
+        "adresse": null,
+        "date_naissance": null,
+        "date_inscription": "2026-06-27T12:38:07.045Z",
+        "statut": "actif",
+        "departement_id": null,
+        "created_at": "2026-06-27T12:38:07.045Z",
+        "updated_at": "2026-06-27T12:38:07.045Z"
+      }
+    ],
+    "departements": [],
+    "utilisateurs": [
+      {
+        "id": "a749f011-87ef-4dc2-a65c-5b7015367e57",
+        "email": "admin@user.com",
+        "mot_de_passe": "$2a$10$/XEKnvScOlULiFvuwCSJhu5bpP5R6NH3d5oTJfOLQk7txREhQpeOK",
+        "role": "ADMIN",
+        "membre_id": "235068bc-763b-4c88-9f85-98fa6230d62e",
+        "actif": true,
+        "dernier_connexion": null,
+        "created_at": "2026-06-27T12:38:03.183Z"
+      },
+      {
+        "id": "96c61cd9-e454-4f94-aca9-8a0e6735f0c7",
+        "email": "pasteur@user.com",
+        "mot_de_passe": "$2a$10$UXzkBWxqMXnO.HAxQ3kXw.qxqqP5FLP6tnplg82YzlL/I0OXutvz6",
+        "role": "PASTEUR",
+        "membre_id": "84061cce-0d00-446e-875c-26ba40fffc54",
+        "actif": true,
+        "dernier_connexion": null,
+        "created_at": "2026-06-27T12:38:04.444Z"
+      },
+      {
+        "id": "39960152-5b3d-4194-aa2a-70a47582f7f8",
+        "email": "secretaire@user.com",
+        "mot_de_passe": "$2a$10$eoHNt28/Jg0dAb1fo09dxuWQZ4284ojuJsDL4BcjPP/kE8sUiIedm",
+        "role": "SECRETAIRE",
+        "membre_id": "74d67e7d-cd0d-4f36-aae5-75f980560249",
+        "actif": true,
+        "dernier_connexion": null,
+        "created_at": "2026-06-27T12:38:05.346Z"
+      },
+      {
+        "id": "311e0d6e-2f1b-4960-a163-3a7256f26ffc",
+        "email": "tresorier@user.com",
+        "mot_de_passe": "$2a$10$qcthfXa3t6PGid.x7FSI1.2FpDikabzOuXKXhkDTYrXkNI8ynIkoS",
+        "role": "TRESORIER",
+        "membre_id": "59a4dbf5-0f22-4f56-b94b-ddd5eda11490",
+        "actif": true,
+        "dernier_connexion": null,
+        "created_at": "2026-06-27T12:38:06.406Z"
+      },
+      {
+        "id": "6ca5406a-a07c-46cb-92d7-7c64c6093f05",
+        "email": "chefdep@user.com",
+        "mot_de_passe": "$2a$10$YnMpeawFLBMIT/ElP3gSOuZ6UHFgyhmz.MwXVk9WVudz5Tdbv58FS",
+        "role": "CHEF_DEPARTEMENT",
+        "membre_id": "ffbd3a3a-b40e-42e3-b154-f9179e2a444c",
+        "actif": true,
+        "dernier_connexion": null,
+        "created_at": "2026-06-27T12:38:07.334Z"
+      }
+    ],
+    "transactions": [],
+    "rapports_departement": [],
+    "logs_activites": []
+  }
+}

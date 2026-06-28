@@ -1,296 +1,249 @@
-// scripts/create-users.js
-import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
-import dotenv from 'dotenv'
-import { fileURLToPath } from 'url'
-import path from 'path'
-import readline from 'readline'
+// create-users.js
+import bcrypt from 'bcryptjs';
+import { PrismaClient } from '@prisma/client';
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+const prisma = new PrismaClient();
 
-dotenv.config()
-
-const prisma = new PrismaClient({
-  datasourceUrl: process.env.DATABASE_URL_LOCAL || process.env.DATABASE_URL || 'postgresql://postgres:Winner1@localhost:5432/eglise_local'
-})
-
-// Configuration des utilisateurs
-const USERS = [
-  {
-    email: 'admin@user.com',
-    password: 'user123',
-    role: 'ADMIN',
-    nom: 'Admin',
-    prenom: 'Principal'
-  },
-  {
-    email: 'pasteur@user.com',
-    password: 'user123',
-    role: 'PASTEUR',
-    nom: 'Pasteur',
-    prenom: 'Jean'
-  },
-  {
-    email: 'secretaire@user.com',
-    password: 'user123',
-    role: 'SECRETAIRE',
-    nom: 'Secrétaire',
-    prenom: 'Marie'
-  },
-  {
-    email: 'tresorier@user.com',
-    password: 'user123',
-    role: 'TRESORIER',
-    nom: 'Trésorier',
-    prenom: 'Pierre'
-  },
-  {
-    email: 'chefdep@user.com',
-    password: 'user123',
-    role: 'CHEF_DEPARTEMENT',
-    nom: 'Chef',
-    prenom: 'Departement'
-  }
-]
-
-// Fonction pour créer un utilisateur avec son membre associé
-async function createUser(userData) {
+async function createUsers() {
   try {
-    console.log(`\n👤 Création de l'utilisateur: ${userData.email}`)
-    
-    // Vérifier si l'utilisateur existe déjà
-    const existingUser = await prisma.utilisateur.findUnique({
-      where: { email: userData.email }
-    })
-    
-    if (existingUser) {
-      console.log(`   ⚠️  L'utilisateur ${userData.email} existe déjà`)
-      return existingUser
+    console.log('🚀 Début de la création des utilisateurs...\n');
+
+    // Récupérer les membres existants
+    const membres = await prisma.membre.findMany({
+      where: {
+        email: {
+          in: [
+            'jean.dupont@email.com',
+            'marie.mbemba@email.com',
+            'pierre.kabasele@email.com',
+            'claire.tshisekedi@email.com',
+            'david.kibwe@email.com',
+            'sophie.mulumba@email.com'
+          ]
+        }
+      }
+    });
+
+    console.log(`📋 ${membres.length} membres trouvés dans la base\n`);
+
+    // Créer un mapping email -> membreId
+    const membreMap = {};
+    membres.forEach(m => {
+      membreMap[m.email] = m.id;
+    });
+
+    // Liste des utilisateurs à créer
+    const utilisateursData = [
+      {
+        email: 'jean.dupont@email.com',
+        motDePasse: 'Admin@123456',
+        role: 'administrateur',
+        membreEmail: 'jean.dupont@email.com',
+        description: 'Administrateur'
+      },
+      {
+        email: 'marie.mbemba@email.com',
+        motDePasse: 'User@123456',
+        role: 'tresorier',
+        membreEmail: 'marie.mbemba@email.com',
+        description: 'Trésorier'
+      },
+      {
+        email: 'pierre.kabasele@email.com',
+        motDePasse: 'User@123456',
+        role: 'chef_departement',
+        membreEmail: 'pierre.kabasele@email.com',
+        description: 'Chef de département'
+      },
+      {
+        email: 'claire.tshisekedi@email.com',
+        motDePasse: 'User@123456',
+        role: 'secretaire',
+        membreEmail: 'claire.tshisekedi@email.com',
+        description: 'Secrétaire'
+      },
+      {
+        email: 'david.kibwe@email.com',
+        motDePasse: 'User@123456',
+        role: 'pasteur',
+        membreEmail: 'david.kibwe@email.com',
+        description: 'Pasteur'
+      },
+      {
+        email: 'sophie.mulumba@email.com',
+        motDePasse: 'User@123456',
+        role: 'tresorier',
+        membreEmail: 'sophie.mulumba@email.com',
+        description: 'Trésorière adjointe'
+      }
+    ];
+
+    const results = {
+      created: [],
+      errors: [],
+      skipped: []
+    };
+
+    for (const userData of utilisateursData) {
+      try {
+        console.log(`📧 Traitement de: ${userData.email} (${userData.description})`);
+
+        // Vérifier si l'utilisateur existe déjà
+        const existingUser = await prisma.utilisateur.findUnique({
+          where: { email: userData.email }
+        });
+
+        if (existingUser) {
+          console.log(`⚠️ L'utilisateur ${userData.email} existe déjà - Ignoré\n`);
+          results.skipped.push({
+            email: userData.email,
+            reason: 'Utilisateur déjà existant'
+          });
+          continue;
+        }
+
+        // Récupérer le membreId
+        const membreId = membreMap[userData.membreEmail] || null;
+        
+        if (membreId) {
+          console.log(`✅ Membre trouvé pour ${userData.membreEmail}`);
+        } else {
+          console.log(`⚠️ Aucun membre trouvé pour ${userData.membreEmail} - L'utilisateur sera créé sans lien`);
+        }
+
+        // Hasher le mot de passe
+        const hashedPassword = await bcrypt.hash(userData.motDePasse, 10);
+
+        // Créer l'utilisateur
+        const utilisateur = await prisma.utilisateur.create({
+          data: {
+            email: userData.email,
+            motDePasse: hashedPassword,
+            role: userData.role,
+            membreId: membreId,
+            actif: true
+          },
+          include: {
+            membre: {
+              select: {
+                nom: true,
+                prenom: true,
+                email: true
+              }
+            }
+          }
+        });
+
+        // Supprimer le mot de passe pour l'affichage
+        const { motDePasse, ...utilisateurSansMdp } = utilisateur;
+
+        results.created.push({
+          ...utilisateurSansMdp,
+          motDePasse: userData.motDePasse,
+          description: userData.description,
+          membre: utilisateur.membre ? {
+            nom: utilisateur.membre.nom,
+            prenom: utilisateur.membre.prenom,
+            email: utilisateur.membre.email
+          } : null
+        });
+
+        console.log(`✅ Utilisateur créé: ${userData.email} (${userData.role}) - ${userData.description}\n`);
+
+      } catch (error) {
+        console.error(`❌ Erreur pour ${userData.email}:`, error.message);
+        results.errors.push({
+          email: userData.email,
+          error: error.message
+        });
+      }
     }
 
-    // Hasher le mot de passe
-    const hashedPassword = await bcrypt.hash(userData.password, 10)
+    // Afficher les résultats
+    console.log('\n' + '='.repeat(70));
+    console.log('📊 RÉSULTATS DE LA CRÉATION DES UTILISATEURS');
+    console.log('='.repeat(70) + '\n');
 
-    // Créer le membre associé (avec les bons noms de champs en camelCase)
-    const membre = await prisma.membre.create({
-      data: {
-        nom: userData.nom,
-        prenom: userData.prenom,
-        email: userData.email,
-        statut: 'actif',
-        dateInscription: new Date(), // Correction: camelCase
-        createdAt: new Date(),       // Correction: camelCase
-        updatedAt: new Date()        // Correction: camelCase
-      }
-    })
-    console.log(`   ✅ Membre créé: ${membre.nom} ${membre.prenom}`)
-
-    // Créer l'utilisateur (avec les bons noms de champs en camelCase)
-    const utilisateur = await prisma.utilisateur.create({
-      data: {
-        email: userData.email,
-        motDePasse: hashedPassword,  // Correction: camelCase
-        role: userData.role,
-        membreId: membre.id,         // Correction: camelCase
-        actif: true,
-        createdAt: new Date()        // Correction: camelCase
-      }
-    })
-    console.log(`   ✅ Utilisateur créé: ${utilisateur.email} (${utilisateur.role})`)
-
-    return utilisateur
-  } catch (error) {
-    console.error(`   ❌ Erreur pour ${userData.email}:`, error.message)
-    throw error
-  }
-}
-
-// Fonction pour vérifier les tables
-async function checkTables() {
-  try {
-    const tables = await prisma.$queryRawUnsafe(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name IN ('utilisateurs', 'membres')
-      ORDER BY table_name;
-    `)
-    
-    if (tables.length < 2) {
-      console.error('❌ Les tables "utilisateurs" et "membres" doivent exister')
-      console.log('   Exécutez d\'abord: npx prisma db push')
-      process.exit(1)
+    if (results.created.length > 0) {
+      console.log('✅ UTILISATEURS CRÉÉS AVEC SUCCÈS:');
+      console.log('-'.repeat(70));
+      results.created.forEach((user, index) => {
+        console.log(`\n📌 Utilisateur ${index + 1}:`);
+        console.log(`   Email: ${user.email}`);
+        console.log(`   Mot de passe: ${user.motDePasse}`);
+        console.log(`   Rôle: ${user.role}`);
+        console.log(`   Description: ${user.description}`);
+        console.log(`   Statut: ${user.actif ? '✅ Actif' : '❌ Inactif'}`);
+        if (user.membre) {
+          console.log(`   Membre: ${user.membre.nom} ${user.membre.prenom}`);
+        } else {
+          console.log(`   ⚠️ Non lié à un membre`);
+        }
+        console.log(`   ID: ${user.id}`);
+      });
     }
-    console.log('✅ Tables vérifiées avec succès')
-    return true
-  } catch (error) {
-    console.error('❌ Erreur de vérification des tables:', error.message)
-    process.exit(1)
-  }
-}
 
-// Fonction pour créer tous les utilisateurs
-async function createAllUsers() {
-  console.log('👥 CRÉATION DES UTILISATEURS')
-  console.log('========================================\n')
-  
-  // Vérifier les connexions
-  console.log('🔌 Vérification de la connexion...')
-  try {
-    await prisma.$connect()
-    console.log('✅ Connexion établie')
-  } catch (error) {
-    console.error('❌ Erreur de connexion:', error.message)
-    console.log('   Vérifiez votre DATABASE_URL dans .env')
-    process.exit(1)
-  }
+    if (results.skipped.length > 0) {
+      console.log('\n⏭️ UTILISATEURS IGNORÉS (déjà existants):');
+      console.log('-'.repeat(70));
+      results.skipped.forEach((skipped, index) => {
+        console.log(`   ${index + 1}. ${skipped.email}: ${skipped.reason}`);
+      });
+    }
 
-  // Vérifier les tables
-  await checkTables()
+    if (results.errors.length > 0) {
+      console.log('\n❌ ERREURS:');
+      console.log('-'.repeat(70));
+      results.errors.forEach((error, index) => {
+        console.log(`   ${index + 1}. ${error.email}: ${error.error}`);
+      });
+    }
 
-  // Afficher les utilisateurs à créer
-  console.log('\n📋 Utilisateurs à créer:')
-  USERS.forEach((user, index) => {
-    console.log(`   ${index + 1}. ${user.email} (${user.role})`)
-  })
+    console.log('\n' + '='.repeat(70));
+    console.log('📈 RÉSUMÉ:');
+    console.log(`   ✅ Créés: ${results.created.length}`);
+    console.log(`   ⏭️ Ignorés: ${results.skipped.length}`);
+    console.log(`   ❌ Erreurs: ${results.errors.length}`);
+    console.log('='.repeat(70) + '\n');
 
-  // Demander confirmation
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  })
+    // Résumé des identifiants de connexion
+    if (results.created.length > 0) {
+      console.log('🔑 IDENTIFIANTS DE CONNEXION:');
+      console.log('-'.repeat(70));
+      console.log('   EMAIL                    | MOT DE PASSE    | RÔLE');
+      console.log('   ' + '-'.repeat(68));
+      results.created.forEach(user => {
+        const email = user.email.padEnd(25);
+        const password = user.motDePasse.padEnd(15);
+        console.log(`   ${email}| ${password}| ${user.role}`);
+      });
+      console.log('-'.repeat(70) + '\n');
+    }
 
-  const answer = await new Promise((resolve) => {
-    rl.question('\nVoulez-vous continuer ? (y/N): ', resolve)
-  })
-  rl.close()
-
-  if (answer.toLowerCase() !== 'y') {
-    console.log('❌ Opération annulée')
-    await prisma.$disconnect()
-    process.exit(0)
-  }
-
-  // Créer les utilisateurs
-  console.log('\n🔄 Création des utilisateurs...')
-  console.log('========================================')
-  
-  const results = []
-  for (const userData of USERS) {
+    // Sauvegarder les résultats dans un fichier
     try {
-      const result = await createUser(userData)
-      results.push({ success: true, data: result, email: userData.email })
+      const fs = await import('fs');
+      const resultsJson = {
+        timestamp: new Date().toISOString(),
+        total: results.created.length + results.errors.length + results.skipped.length,
+        ...results
+      };
+      fs.writeFileSync(
+        'utilisateurs_creation_results.json',
+        JSON.stringify(resultsJson, null, 2)
+      );
+      console.log('📄 Résultats sauvegardés dans utilisateurs_creation_results.json');
     } catch (error) {
-      results.push({ success: false, email: userData.email, error: error.message })
-    }
-  }
-
-  // Résumé
-  console.log('\n📊 RÉSUMÉ')
-  console.log('========================================')
-  const successCount = results.filter(r => r.success).length
-  const failCount = results.filter(r => !r.success).length
-  
-  console.log(`✅ Réussis: ${successCount}`)
-  console.log(`❌ Échecs: ${failCount}`)
-
-  if (failCount > 0) {
-    console.log('\n❌ Échecs:')
-    results.filter(r => !r.success).forEach(r => {
-      console.log(`   - ${r.email}: ${r.error}`)
-    })
-  }
-
-  // Afficher les identifiants
-  console.log('\n🔑 IDENTIFIANTS DES UTILISATEURS CRÉÉS')
-  console.log('========================================')
-  console.log('Email          | Mot de passe | Rôle')
-  console.log('----------------------------------------')
-  USERS.forEach(user => {
-    console.log(`${user.email.padEnd(15)} | ${'user123'.padEnd(13)} | ${user.role}`)
-  })
-
-  await prisma.$disconnect()
-}
-
-// Fonction pour supprimer tous les utilisateurs (optionnel)
-async function deleteAllUsers() {
-  console.log('🗑️  SUPPRESSION DE TOUS LES UTILISATEURS')
-  console.log('========================================\n')
-  
-  try {
-    await prisma.$connect()
-    
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    })
-
-    const answer = await new Promise((resolve) => {
-      rl.question('⚠️  Êtes-vous sûr de vouloir supprimer TOUS les utilisateurs et membres ? (y/N): ', resolve)
-    })
-    rl.close()
-
-    if (answer.toLowerCase() !== 'y') {
-      console.log('❌ Opération annulée')
-      await prisma.$disconnect()
-      process.exit(0)
+      console.log('⚠️ Impossible de sauvegarder le fichier JSON');
     }
 
-    // Supprimer les utilisateurs
-    const deletedUsers = await prisma.$executeRawUnsafe(`
-      DELETE FROM public.utilisateurs 
-      WHERE email = ANY($1)
-    `, [USERS.map(u => u.email)])
-    
-    console.log(`✅ ${deletedUsers} utilisateurs supprimés`)
-
-    // Supprimer les membres associés
-    const deletedMembres = await prisma.$executeRawUnsafe(`
-      DELETE FROM public.membres 
-      WHERE email = ANY($1)
-    `, [USERS.map(u => u.email)])
-    
-    console.log(`✅ ${deletedMembres} membres supprimés`)
-
-    await prisma.$disconnect()
   } catch (error) {
-    console.error('❌ Erreur:', error)
-    await prisma.$disconnect()
-    process.exit(1)
+    console.error('❌ Erreur fatale:', error);
+  } finally {
+    await prisma.$disconnect();
+    console.log('\n👋 Déconnexion de la base de données');
   }
 }
 
-// =====================================================
-// MAIN
-// =====================================================
-const command = process.argv[2] || 'create'
-
-async function main() {
-  switch (command) {
-    case 'create':
-    case '--create':
-      await createAllUsers()
-      break
-    case 'delete':
-    case '--delete':
-      await deleteAllUsers()
-      break
-    default:
-      console.log(`
-Usage: node scripts/create-users.js [commande]
-
-Commandes disponibles:
-  create  - Créer les utilisateurs par défaut
-  delete  - Supprimer les utilisateurs par défaut
-
-Exemples:
-  node scripts/create-users.js create
-  node scripts/create-users.js delete
-      `)
-      process.exit(0)
-  }
-}
-
-main().catch(console.error)
+// Exécution du script
+createUsers();

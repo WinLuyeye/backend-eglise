@@ -12,23 +12,13 @@ const __dirname = path.dirname(__filename)
 // Charger les variables d'environnement
 dotenv.config()
 
-// Configuration des clients Prisma
-// Base de données de production (Supabase)
+// Configuration des clients Prisma - Version CORRIGÉE
 const prismaOnline = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
+  datasourceUrl: process.env.DATABASE_URL
 })
 
-// Base de données locale
 const prismaLocal = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL_LOCAL || 'postgresql://postgres:Winner1@localhost:5432/eglise_local',
-    },
-  },
+  datasourceUrl: process.env.DATABASE_URL_LOCAL || 'postgresql://postgres:Winner1@localhost:5432/eglise_local'
 })
 
 const BACKUP_DIR = path.join(__dirname, '../backups')
@@ -101,7 +91,6 @@ async function exportData() {
       console.log(`📊 Exportation de la table: ${table}...`)
       
       try {
-        // Utiliser des guillemets pour les noms de tables avec des caractères spéciaux
         const records = await prismaOnline.$queryRawUnsafe(`SELECT * FROM "${table}"`)
         data[table] = records
         console.log(`   ✅ ${records.length} enregistrements exportés`)
@@ -187,7 +176,7 @@ async function importData(backupFile = null) {
     }
 
     // Vérifier s'il y a des données à importer
-    const totalRecords = Object.values(data).reduce((acc, arr) => arr?.length || 0, acc)
+    const totalRecords = Object.values(data).reduce((acc, arr) => arr?.length || 0, 0)
     if (totalRecords === 0) {
       console.log('\n⚠️  Aucune donnée à importer')
       return

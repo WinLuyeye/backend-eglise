@@ -4,12 +4,23 @@ import logger from '../utils/logger.js'
 const TAUX_CHANGE = 2250
 
 /**
- * @desc    Dashboard global (Pasteur, Admin)
+ * @desc    Dashboard global (Pasteur, Admin, etc.)
  * @route   GET /api/dashboard/global
- * @access  Private (Pasteur, Admin)
+ * @access  Private (ADMIN, PASTEUR, SECRETAIRE, TRESORIER, CHEF_DEPARTEMENT)
  */
 export const getGlobalDashboard = async (req, res) => {
   try {
+    // ✅ Vérification des rôles autorisés
+    const allowedRoles = ['ADMIN', 'PASTEUR', 'SECRETAIRE', 'TRESORIER', 'CHEF_DEPARTEMENT']
+    const userRole = req.user?.role?.toUpperCase()
+    
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé. Rôle non autorisé pour ce tableau de bord.'
+      })
+    }
+
     const now = new Date()
     const debutMois = new Date(now.getFullYear(), now.getMonth(), 1)
     const debutAnnee = new Date(now.getFullYear(), 0, 1)
@@ -239,6 +250,17 @@ export const getGlobalDashboard = async (req, res) => {
  */
 export const getTresorierDashboard = async (req, res) => {
   try {
+    // ✅ Vérification des rôles autorisés
+    const allowedRoles = ['ADMIN', 'TRESORIER']
+    const userRole = req.user?.role?.toUpperCase()
+    
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé. Rôle non autorisé pour ce tableau de bord.'
+      })
+    }
+
     const now = new Date()
     const debutMois = new Date(now.getFullYear(), now.getMonth(), 1)
     
@@ -286,29 +308,53 @@ export const getTresorierDashboard = async (req, res) => {
 /**
  * @desc    Dashboard chef département
  * @route   GET /api/dashboard/departement
- * @access  Private (Chef département)
+ * @access  Private (Chef département, Admin)
  */
 export const getDepartementDashboard = async (req, res) => {
   try {
+    // ✅ Vérification des rôles autorisés
+    const allowedRoles = ['ADMIN', 'CHEF_DEPARTEMENT']
+    const userRole = req.user?.role?.toUpperCase()
+    
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé. Rôle non autorisé pour ce tableau de bord.'
+      })
+    }
+
     const membre = await prisma.membre.findUnique({
       where: { id: req.user.membreId },
       include: { departement: true }
     })
     
-    if (!membre.departementId) {
-      return res.status(400).json({ message: 'Vous n\'êtes pas assigné à un département' })
+    if (!membre || !membre.departementId) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Vous n\'êtes pas assigné à un département' 
+      })
     }
     
     const departementId = membre.departementId
     
-    const membres = await prisma.membre.count({
-      where: { departementId }
-    })
+    const [membresCount, rapportsCount] = await Promise.all([
+      prisma.membre.count({
+        where: { departementId }
+      }),
+      prisma.rapportDepartement.count({
+        where: { departementId }
+      })
+    ])
     
     const rapports = await prisma.rapportDepartement.findMany({
       where: { departementId },
       orderBy: { periode: 'desc' },
-      take: 6
+      take: 6,
+      include: {
+        createur: {
+          select: { email: true }
+        }
+      }
     })
     
     res.json({
@@ -316,8 +362,8 @@ export const getDepartementDashboard = async (req, res) => {
       data: {
         departement: membre.departement,
         statistiques: {
-          membres,
-          rapports: await prisma.rapportDepartement.count({ where: { departementId } })
+          membres: membresCount,
+          rapports: rapportsCount
         },
         rapportsRecents: rapports
       }

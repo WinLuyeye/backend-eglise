@@ -1,0 +1,104 @@
+{
+  "timestamp": "2026-06-27T22:02:31.689Z",
+  "total": 6,
+  "created": [
+    {
+      "id": "5d9d6cb9-b218-4086-abf1-c9d150d67f05",
+      "email": "jean.dupont@email.com",
+      "role": "administrateur",
+      "membreId": "beba7199-a36e-49d6-b6c0-93f684608662",
+      "actif": true,
+      "dernierConnexion": null,
+      "createdAt": "2026-06-27T22:02:18.486Z",
+      "membre": {
+        "nom": "Dupont",
+        "prenom": "Jean",
+        "email": "jean.dupont@email.com"
+      },
+      "motDePasse": "Admin@123456",
+      "description": "Administrateur"
+    },
+    {
+      "id": "8677352d-5956-4c04-8846-dd0596d4b45d",
+      "email": "marie.mbemba@email.com",
+      "role": "tresorier",
+      "membreId": "3d5da74b-9911-48cb-8608-b5ea1288e841",
+      "actif": true,
+      "dernierConnexion": null,
+      "createdAt": "2026-06-27T22:02:21.155Z",
+      "membre": {
+        "nom": "Mbemba",
+        "prenom": "Marie",
+        "email": "marie.mbemba@email.com"
+      },
+      "motDePasse": "User@123456",
+      "description": "Trésorier"
+    },
+    {
+      "id": "37a3e1ce-055c-4d96-99f4-dd8a091f0fdc",
+      "email": "pierre.kabasele@email.com",
+      "role": "chef_departement",
+      "membreId": "76967063-6110-4d6d-bd87-fdb4ef10a42a",
+      "actif": true,
+      "dernierConnexion": null,
+      "createdAt": "2026-06-27T22:02:22.989Z",
+      "membre": {
+        "nom": "Kabasele",
+        "prenom": "Pierre",
+        "email": "pierre.kabasele@email.com"
+      },
+      "motDePasse": "User@123456",
+      "description": "Chef de département"
+    },
+    {
+      "id": "a6a10b17-bb8d-4682-893a-cc9e49644a55",
+      "email": "claire.tshisekedi@email.com",
+      "role": "secretaire",
+      "membreId": "aa67c82a-9324-4997-a7c7-cfd7bd74b8f2",
+      "actif": true,
+      "dernierConnexion": null,
+      "createdAt": "2026-06-27T22:02:25.348Z",
+      "membre": {
+        "nom": "Tshisekedi",
+        "prenom": "Claire",
+        "email": "claire.tshisekedi@email.com"
+      },
+      "motDePasse": "User@123456",
+      "description": "Secrétaire"
+    },
+    {
+      "id": "445610a0-9256-4f57-8995-0862909df324",
+      "email": "david.kibwe@email.com",
+      "role": "pasteur",
+      "membreId": "ff9f1308-df34-4a73-9db4-8344ebe5ef30",
+      "actif": true,
+      "dernierConnexion": null,
+      "createdAt": "2026-06-27T22:02:27.874Z",
+      "membre": {
+        "nom": "Kibwe",
+        "prenom": "David",
+        "email": "david.kibwe@email.com"
+      },
+      "motDePasse": "User@123456",
+      "description": "Pasteur"
+    },
+    {
+      "id": "079cba5a-7a51-4a1e-b71f-f645c9949749",
+      "email": "sophie.mulumba@email.com",
+      "role": "tresorier",
+      "membreId": "c767dc83-b296-4671-8ab9-cb24ca1fe36e",
+      "actif": true,
+      "dernierConnexion": null,
+      "createdAt": "2026-06-27T22:02:29.945Z",
+      "membre": {
+        "nom": "Mulumba",
+        "prenom": "Sophie",
+        "email": "sophie.mulumba@email.com"
+      },
+      "motDePasse": "User@123456",
+      "description": "Trésorière adjointe"
+    }
+  ],
+  "errors": [],
+  "skipped": []
+}

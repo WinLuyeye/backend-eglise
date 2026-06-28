@@ -13,12 +13,9 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "node prisma/seed.js",
     "build": "prisma generate",
-    "lint": "eslint src/**/*.js",
-    "format": "prettier --write src/**/*.js",
-    "db:backup": "node scripts/backup-restore.js export",
-    "db:restore": "node scripts/backup-restore.js import",
-    "db:sync": "node scripts/backup-restore.js sync",
-    "db:migrate:local": "npx prisma db push --schema=prisma/schema.prisma"
+    "users:create": "node scripts/create-users.js",
+    "users:list": "node scripts/list-users.js",
+    "studio": "npx prisma studio"
   },
   "keywords": [
     "eglise",
@@ -49,9 +46,6 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "axios": "^1.17.0",
-    "chalk": "^5.6.2",
-    "cli-table3": "^0.6.5",
     "nodemon": "^3.0.2",
     "prisma": "^5.22.0"
   },

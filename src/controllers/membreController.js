@@ -28,7 +28,7 @@ export const getMembres = async (req, res) => {
     
     // 🔒 Le secrétaire ne voit pas les administrateurs
     if (req.user.role === 'secretaire') {
-      where.utilisateur = {
+      where.utilisateurs = { // ✅ CORRECTION: utilisateurs (pluriel)
         NOT: {
           role: 'administrateur'
         }
@@ -50,7 +50,7 @@ export const getMembres = async (req, res) => {
         where,
         include: {
           departement: true,
-          utilisateur: {
+          utilisateurs: { // ✅ CORRECTION: utilisateurs (pluriel)
             select: { role: true, actif: true }
           }
         },
@@ -90,7 +90,7 @@ export const getMembreById = async (req, res) => {
       where: { id },
       include: {
         departement: true,
-        utilisateur: {
+        utilisateurs: { // ✅ CORRECTION: utilisateurs (pluriel)
           select: { role: true, actif: true, email: true, dernierConnexion: true }
         },
         transactions: {
@@ -117,8 +117,14 @@ export const getMembreById = async (req, res) => {
     }
     
     // 🔒 Le secrétaire ne peut pas voir un administrateur
-    if (req.user.role === 'secretaire' && membre.utilisateur?.role === 'administrateur') {
-      return res.status(403).json({ message: 'Accès non autorisé' })
+    if (req.user.role === 'secretaire') {
+      const membreWithUser = await prisma.membre.findUnique({
+        where: { id },
+        include: { utilisateurs: true } // ✅ CORRECTION: utilisateurs (pluriel)
+      })
+      if (membreWithUser?.utilisateurs?.role === 'administrateur') {
+        return res.status(403).json({ message: 'Accès non autorisé' })
+      }
     }
     
     res.json({ success: true, data: membre })
