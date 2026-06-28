@@ -1,25 +1,52 @@
+// backend/src/controllers/dashboardController.js
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
+import { ROLES, normalizeRole, ERROR_MESSAGES } from '../utils/constants.js'
 
 const TAUX_CHANGE = 2250
 
+// ✅ Définir les rôles autorisés avec les constantes normalisées
+const ROLES_AUTHORISES = {
+  GLOBAL: [
+    ROLES.ADMINISTRATEUR,
+    ROLES.PASTEUR,
+    ROLES.SECRETAIRE,
+    ROLES.TRESORIER,
+    ROLES.CHEF_DEPARTEMENT
+  ],
+  TRESORIER: [
+    ROLES.ADMINISTRATEUR,
+    ROLES.TRESORIER
+  ],
+  DEPARTEMENT: [
+    ROLES.ADMINISTRATEUR,
+    ROLES.CHEF_DEPARTEMENT
+  ]
+}
+
 /**
- * @desc    Dashboard global (Pasteur, Admin, etc.)
+ * @desc    Dashboard global
  * @route   GET /api/dashboard/global
- * @access  Private (ADMIN, PASTEUR, SECRETAIRE, TRESORIER, CHEF_DEPARTEMENT)
+ * @access  Private
  */
 export const getGlobalDashboard = async (req, res) => {
   try {
-    // ✅ Vérification des rôles autorisés
-    const allowedRoles = ['ADMIN', 'PASTEUR', 'SECRETAIRE', 'TRESORIER', 'CHEF_DEPARTEMENT']
-    const userRole = req.user?.role?.toUpperCase()
+    // ✅ Normaliser le rôle de l'utilisateur
+    const userRole = normalizeRole(req.user?.role)
     
-    if (!userRole || !allowedRoles.includes(userRole)) {
+    console.log('📊 Dashboard global - Utilisateur:', req.user?.email, 'Rôle:', userRole)
+    
+    if (!userRole || !ROLES_AUTHORISES.GLOBAL.includes(userRole)) {
+      console.log(`❌ Rôle non autorisé: ${userRole}`)
       return res.status(403).json({
         success: false,
-        message: 'Accès refusé. Rôle non autorisé pour ce tableau de bord.'
+        message: ERROR_MESSAGES.FORBIDDEN,
+        requiredRoles: ROLES_AUTHORISES.GLOBAL,
+        yourRole: userRole
       })
     }
+
+    console.log(`✅ Accès autorisé pour: ${userRole}`)
 
     const now = new Date()
     const debutMois = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -105,7 +132,7 @@ export const getGlobalDashboard = async (req, res) => {
       }
     }
     
-    // Top donateurs (toutes devises confondues, converti en CDF)
+    // Top donateurs
     const topDonateursRaw = await prisma.transaction.groupBy({
       by: ['membreId'],
       where: {
@@ -124,7 +151,6 @@ export const getGlobalDashboard = async (req, res) => {
           select: { id: true, nom: true, prenom: true }
         })
         if (membre) {
-          // Récupérer le montant total en CDF pour ce membre
           const transactionsMembre = await prisma.transaction.findMany({
             where: {
               type: 'entree',
@@ -178,7 +204,7 @@ export const getGlobalDashboard = async (req, res) => {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const finMois = new Date(now.getFullYear(), now.getMonth() - i + 1, 0)
       
-      const transactionsMois = await prisma.transaction.findMany({
+      const transactionsMoisEvo = await prisma.transaction.findMany({
         where: {
           dateTransaction: { gte: date, lte: finMois }
         }
@@ -187,7 +213,7 @@ export const getGlobalDashboard = async (req, res) => {
       let totalEntrees = 0
       let totalSorties = 0
       
-      transactionsMois.forEach(t => {
+      transactionsMoisEvo.forEach(t => {
         const montant = parseFloat(t.montant)
         let montantCDF = t.devise === 'USD' ? montant * TAUX_CHANGE : montant
         
@@ -212,7 +238,7 @@ export const getGlobalDashboard = async (req, res) => {
         membres: {
           total: totalMembres,
           actifs: membresActifs,
-          tauxActivite: ((membresActifs / totalMembres) * 100).toFixed(2),
+          tauxActivite: totalMembres > 0 ? ((membresActifs / totalMembres) * 100).toFixed(2) : '0',
           nouveauxMois,
           nouveauxAnnee
         },
@@ -239,32 +265,34 @@ export const getGlobalDashboard = async (req, res) => {
     })
   } catch (error) {
     logger.error('Erreur getGlobalDashboard:', error)
-    res.status(500).json({ message: 'Erreur interne du serveur' })
+    res.status(500).json({ 
+      success: false,
+      message: ERROR_MESSAGES.INTERNAL_ERROR
+    })
   }
 }
 
 /**
  * @desc    Dashboard trésorier
  * @route   GET /api/dashboard/tresorier
- * @access  Private (Tresorier, Admin)
+ * @access  Private
  */
 export const getTresorierDashboard = async (req, res) => {
   try {
-    // ✅ Vérification des rôles autorisés
-    const allowedRoles = ['ADMIN', 'TRESORIER']
-    const userRole = req.user?.role?.toUpperCase()
+    const userRole = normalizeRole(req.user?.role)
     
-    if (!userRole || !allowedRoles.includes(userRole)) {
+    if (!userRole || !ROLES_AUTHORISES.TRESORIER.includes(userRole)) {
       return res.status(403).json({
         success: false,
-        message: 'Accès refusé. Rôle non autorisé pour ce tableau de bord.'
+        message: ERROR_MESSAGES.FORBIDDEN,
+        requiredRoles: ROLES_AUTHORISES.TRESORIER,
+        yourRole: userRole
       })
     }
 
     const now = new Date()
     const debutMois = new Date(now.getFullYear(), now.getMonth(), 1)
     
-    // Transactions du mois
     const transactionsMois = await prisma.transaction.findMany({
       where: {
         dateTransaction: { gte: debutMois }
@@ -275,7 +303,6 @@ export const getTresorierDashboard = async (req, res) => {
       }
     })
     
-    // Statistiques par catégorie
     const entreesParCategorie = {}
     const sortiesParCategorie = {}
     
@@ -301,25 +328,28 @@ export const getTresorierDashboard = async (req, res) => {
     })
   } catch (error) {
     logger.error('Erreur getTresorierDashboard:', error)
-    res.status(500).json({ message: 'Erreur interne du serveur' })
+    res.status(500).json({ 
+      success: false,
+      message: ERROR_MESSAGES.INTERNAL_ERROR
+    })
   }
 }
 
 /**
  * @desc    Dashboard chef département
  * @route   GET /api/dashboard/departement
- * @access  Private (Chef département, Admin)
+ * @access  Private
  */
 export const getDepartementDashboard = async (req, res) => {
   try {
-    // ✅ Vérification des rôles autorisés
-    const allowedRoles = ['ADMIN', 'CHEF_DEPARTEMENT']
-    const userRole = req.user?.role?.toUpperCase()
+    const userRole = normalizeRole(req.user?.role)
     
-    if (!userRole || !allowedRoles.includes(userRole)) {
+    if (!userRole || !ROLES_AUTHORISES.DEPARTEMENT.includes(userRole)) {
       return res.status(403).json({
         success: false,
-        message: 'Accès refusé. Rôle non autorisé pour ce tableau de bord.'
+        message: ERROR_MESSAGES.FORBIDDEN,
+        requiredRoles: ROLES_AUTHORISES.DEPARTEMENT,
+        yourRole: userRole
       })
     }
 
@@ -370,6 +400,9 @@ export const getDepartementDashboard = async (req, res) => {
     })
   } catch (error) {
     logger.error('Erreur getDepartementDashboard:', error)
-    res.status(500).json({ message: 'Erreur interne du serveur' })
+    res.status(500).json({ 
+      success: false,
+      message: ERROR_MESSAGES.INTERNAL_ERROR
+    })
   }
 }

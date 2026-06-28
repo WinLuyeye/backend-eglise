@@ -1,3 +1,5 @@
+// backend/src/utils/constants.js
+
 // ==================== RÔLES UTILISATEURS ====================
 export const ROLES = {
   PASTEUR: 'pasteur',
@@ -9,6 +11,19 @@ export const ROLES = {
 
 // Liste des rôles pour validation
 export const ROLES_LIST = Object.values(ROLES)
+
+// ✅ Fonction pour normaliser un rôle (toujours en minuscules)
+export const normalizeRole = (role) => {
+  if (!role) return null
+  const normalized = role.toLowerCase().trim()
+  // Vérifier si le rôle normalisé existe dans la liste
+  return ROLES_LIST.includes(normalized) ? normalized : null
+}
+
+// ✅ Fonction pour vérifier si un rôle est valide
+export const isValidRole = (role) => {
+  return ROLES_LIST.includes(normalizeRole(role))
+}
 
 // ==================== STATUTS DES MEMBRES ====================
 export const STATUT_MEMBRE = {
@@ -65,36 +80,23 @@ export const PERMISSIONS = {
 
 // ==================== MESSAGES D'ERREUR ====================
 export const ERROR_MESSAGES = {
-  // Auth
   UNAUTHORIZED: 'Non authentifié. Veuillez vous connecter.',
   TOKEN_EXPIRED: 'Session expirée. Veuillez vous reconnecter.',
   TOKEN_INVALID: 'Token invalide.',
   INVALID_CREDENTIALS: 'Email ou mot de passe incorrect.',
   ACCOUNT_DISABLED: 'Compte désactivé. Contactez l\'administrateur.',
-  
-  // Permissions
   FORBIDDEN: 'Accès refusé. Vous n\'avez pas les droits nécessaires.',
   INSUFFICIENT_PERMISSIONS: 'Permissions insuffisantes pour cette action.',
-  
-  // Resources
   NOT_FOUND: 'Ressource non trouvée.',
   DUPLICATE: 'Cette ressource existe déjà.',
   ASSOCIATED_RECORDS: 'Cette ressource a des enregistrements associés.',
-  
-  // Validation
   INVALID_DATA: 'Données invalides.',
   MISSING_FIELDS: 'Champs requis manquants.',
   INVALID_FORMAT: 'Format de données invalide.',
-  
-  // Server
   INTERNAL_ERROR: 'Erreur interne du serveur.',
   DATABASE_ERROR: 'Erreur de base de données.',
-  
-  // Upload
   FILE_TOO_LARGE: 'Fichier trop volumineux.',
   FILE_TYPE_NOT_ALLOWED: 'Type de fichier non autorisé.',
-  
-  // Transactions
   INSUFFICIENT_FUNDS: 'Fonds insuffisants pour cette opération.',
   INVALID_TRANSACTION_TYPE: 'Type de transaction invalide.',
   CATEGORY_TYPE_MISMATCH: 'La catégorie ne correspond pas au type de transaction.',
