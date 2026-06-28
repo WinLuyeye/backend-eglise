@@ -1,19 +1,24 @@
+// backend/src/controllers/transactionController.js
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
 
 // Taux de change par défaut (1 USD = 2250 CDF)
 const DEFAULT_TX_RATE = 2250
 
-// Fonction pour convertir les montants
-const convertirMontant = (montant, deviseSource, deviseCible, tauxChange = DEFAULT_TX_RATE) => {
-  if (deviseSource === deviseCible) return montant
-  
-  if (deviseSource === 'USD' && deviseCible === 'CDF') {
-    return montant * tauxChange
-  } else if (deviseSource === 'CDF' && deviseCible === 'USD') {
-    return montant / tauxChange
-  }
-  return montant
+// ✅ Fonction pour normaliser la devise
+const normalizeDevise = (devise) => {
+  if (!devise) return 'CDF'
+  const normalized = devise.toUpperCase().trim()
+  return normalized === 'USD' ? 'USD' : 'CDF'
+}
+
+// ✅ Fonction pour normaliser le type
+const normalizeType = (type) => {
+  if (!type) return null
+  const normalized = type.toLowerCase().trim()
+  if (['entree', 'revenu', 'revenue', 'income'].includes(normalized)) return 'entree'
+  if (['sortie', 'depense', 'expense', 'outcome'].includes(normalized)) return 'sortie'
+  return normalized
 }
 
 /**
@@ -39,12 +44,14 @@ export const getTransactions = async (req, res) => {
     if (type) where.type = type
     if (categorieId) where.categorieId = categorieId
     if (membreId) where.membreId = membreId
-    if (devise) where.devise = devise
+    if (devise) where.devise = normalizeDevise(devise)
     if (dateDebut || dateFin) {
       where.dateTransaction = {}
       if (dateDebut) where.dateTransaction.gte = new Date(dateDebut)
       if (dateFin) where.dateTransaction.lte = new Date(dateFin)
     }
+    
+    console.log('🔍 Where clause:', where)
     
     const [transactions, total] = await Promise.all([
       prisma.transaction.findMany({
@@ -65,19 +72,23 @@ export const getTransactions = async (req, res) => {
       prisma.transaction.count({ where })
     ])
     
-    // Calculer les totaux par devise
-    const totalsByDevise = await prisma.transaction.groupBy({
-      by: ['devise'],
-      where,
-      _sum: { montant: true }
-    })
+    console.log(`📊 ${transactions.length} transactions trouvées`)
+    
+    if (transactions.length > 0) {
+      const devises = [...new Set(transactions.map(t => t.devise || 'NULL'))]
+      console.log('💵 Devises présentes:', devises)
+      console.log('📋 Première transaction:', {
+        id: transactions[0].id,
+        type: transactions[0].type,
+        montant: String(transactions[0].montant),
+        devise: transactions[0].devise,
+        date: transactions[0].dateTransaction
+      })
+    }
     
     res.json({
       success: true,
       data: transactions,
-      totals: {
-        parDevise: totalsByDevise
-      },
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -86,8 +97,252 @@ export const getTransactions = async (req, res) => {
       }
     })
   } catch (error) {
+    console.error('❌ Erreur getTransactions:', error)
     logger.error('Erreur getTransactions:', error)
-    res.status(500).json({ message: 'Erreur interne du serveur' })
+    res.status(500).json({ 
+      success: false,
+      message: 'Erreur interne du serveur' 
+    })
+  }
+}
+
+/**
+ * @desc    Rapport financier avec gestion des devises
+ * @route   GET /api/transactions/report/summary
+ * @access  Private (Pasteur, Tresorier, Admin)
+ */
+export const getFinancialReport = async (req, res) => {
+  try {
+    const { periode = 'all', dateDebut, dateFin } = req.query
+    
+    console.log('📊 RAPPORT - Paramètres reçus:', { periode, dateDebut, dateFin })
+    
+    let startDate, endDate
+    
+    if (dateDebut && dateFin) {
+      startDate = new Date(dateDebut)
+      endDate = new Date(dateFin)
+    } else {
+      if (periode === 'all' || !periode) {
+        const firstTransaction = await prisma.transaction.findFirst({
+          orderBy: { dateTransaction: 'asc' },
+          select: { dateTransaction: true }
+        })
+        
+        if (firstTransaction) {
+          startDate = new Date(firstTransaction.dateTransaction)
+          startDate.setMonth(0, 1)
+          startDate.setHours(0, 0, 0, 0)
+        } else {
+          startDate = new Date()
+          startDate.setFullYear(startDate.getFullYear() - 2)
+          startDate.setMonth(0, 1)
+          startDate.setHours(0, 0, 0, 0)
+        }
+        
+        endDate = new Date()
+        endDate.setHours(23, 59, 59, 999)
+        
+        console.log('📊 Période "all":', { startDate, endDate })
+      } else {
+        endDate = new Date()
+        endDate.setHours(23, 59, 59, 999)
+        startDate = new Date()
+        startDate.setHours(0, 0, 0, 0)
+        
+        switch (periode) {
+          case 'week':
+            startDate.setDate(startDate.getDate() - 7)
+            break
+          case 'month':
+            startDate.setMonth(startDate.getMonth() - 1)
+            break
+          case 'year':
+          default:
+            startDate.setFullYear(startDate.getFullYear() - 1)
+            break
+        }
+      }
+    }
+    
+    console.log('📊 Période calculée:', { 
+      startDate: startDate.toISOString(), 
+      endDate: endDate.toISOString()
+    })
+    
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        dateTransaction: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      include: {
+        categorie: true,
+        membre: {
+          select: { nom: true, prenom: true }
+        }
+      },
+      orderBy: { dateTransaction: 'desc' }
+    })
+    
+    console.log(`📊 Total transactions trouvées: ${transactions.length}`)
+    
+    const statsParDevise = {
+      USD: { entrees: 0, sorties: 0, solde: 0, nombre: 0 },
+      CDF: { entrees: 0, sorties: 0, solde: 0, nombre: 0 }
+    }
+    
+    let totalEntreesUSD = 0
+    let totalSortiesUSD = 0
+    let totalEntreesCDF = 0
+    let totalSortiesCDF = 0
+    
+    for (const t of transactions) {
+      const devise = normalizeDevise(t.devise)
+      const montant = parseFloat(t.montant) || 0
+      const type = normalizeType(t.type)
+      
+      console.log(`💰 ${t.type} -> ${type} - ${montant} ${devise}`)
+      
+      if (type === 'entree') {
+        statsParDevise[devise].entrees += montant
+        statsParDevise[devise].nombre++
+        if (devise === 'USD') {
+          totalEntreesUSD += montant
+        } else {
+          totalEntreesCDF += montant
+        }
+      } else if (type === 'sortie') {
+        statsParDevise[devise].sorties += montant
+        if (devise === 'USD') {
+          totalSortiesUSD += montant
+        } else {
+          totalSortiesCDF += montant
+        }
+      }
+    }
+    
+    statsParDevise.USD.solde = statsParDevise.USD.entrees - statsParDevise.USD.sorties
+    statsParDevise.CDF.solde = statsParDevise.CDF.entrees - statsParDevise.CDF.sorties
+    
+    console.log('📊 Stats USD:', statsParDevise.USD)
+    console.log('📊 Stats CDF:', statsParDevise.CDF)
+    
+    const totalEntreesCDFEquivalent = totalEntreesCDF + (totalEntreesUSD * DEFAULT_TX_RATE)
+    const totalSortiesCDFEquivalent = totalSortiesCDF + (totalSortiesUSD * DEFAULT_TX_RATE)
+    
+    const entreesParCategorie = {}
+    const sortiesParCategorie = {}
+    
+    for (const t of transactions) {
+      const catName = t.categorie?.nom || 'Sans catégorie'
+      const devise = normalizeDevise(t.devise)
+      let montant = parseFloat(t.montant) || 0
+      const type = normalizeType(t.type)
+      
+      if (devise === 'USD') {
+        montant = montant * DEFAULT_TX_RATE
+      }
+      
+      if (type === 'entree') {
+        entreesParCategorie[catName] = (entreesParCategorie[catName] || 0) + montant
+      } else if (type === 'sortie') {
+        sortiesParCategorie[catName] = (sortiesParCategorie[catName] || 0) + montant
+      }
+    }
+    
+    const evolutionMensuelle = []
+    const moisTransactions = {}
+    
+    for (const t of transactions) {
+      const date = new Date(t.dateTransaction)
+      const moisKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const moisLabel = date.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })
+      const devise = normalizeDevise(t.devise)
+      let montant = parseFloat(t.montant) || 0
+      const type = normalizeType(t.type)
+      
+      if (devise === 'USD') {
+        montant = montant * DEFAULT_TX_RATE
+      }
+      
+      if (!moisTransactions[moisKey]) {
+        moisTransactions[moisKey] = { mois: moisLabel, entrees: 0, sorties: 0 }
+      }
+      
+      if (type === 'entree') {
+        moisTransactions[moisKey].entrees += montant
+      } else if (type === 'sortie') {
+        moisTransactions[moisKey].sorties += montant
+      }
+    }
+    
+    for (const key in moisTransactions) {
+      evolutionMensuelle.push(moisTransactions[key])
+    }
+    evolutionMensuelle.sort((a, b) => {
+      const moisOrder = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+      const moisA = a.mois.split(' ')[0]
+      const moisB = b.mois.split(' ')[0]
+      return moisOrder.indexOf(moisA) - moisOrder.indexOf(moisB)
+    })
+    
+    const responseData = {
+      periode: { 
+        debut: startDate, 
+        fin: endDate, 
+        libelle: periode 
+      },
+      tauxChange: DEFAULT_TX_RATE,
+      statsParDevise,
+      total: {
+        entrees: totalEntreesCDFEquivalent,
+        sorties: totalSortiesCDFEquivalent,
+        solde: totalEntreesCDFEquivalent - totalSortiesCDFEquivalent,
+        parDevise: {
+          USD: {
+            entrees: totalEntreesUSD,
+            sorties: totalSortiesUSD,
+            solde: totalEntreesUSD - totalSortiesUSD
+          },
+          CDF: {
+            entrees: totalEntreesCDF,
+            sorties: totalSortiesCDF,
+            solde: totalEntreesCDF - totalSortiesCDF
+          }
+        }
+      },
+      entreesParCategorie,
+      sortiesParCategorie,
+      evolutionMensuelle,
+      nombreTransactions: {
+        entrees: transactions.filter(t => normalizeType(t.type) === 'entree').length,
+        sorties: transactions.filter(t => normalizeType(t.type) === 'sortie').length,
+        total: transactions.length,
+        parDevise: {
+          USD: statsParDevise.USD.nombre,
+          CDF: statsParDevise.CDF.nombre
+        }
+      },
+      transactions: transactions
+    }
+    
+    console.log('📊 Rapport généré avec succès')
+    console.log(`📊 Total transactions dans le rapport: ${transactions.length}`)
+    
+    res.json({
+      success: true,
+      data: responseData
+    })
+  } catch (error) {
+    console.error('❌ Erreur getFinancialReport:', error)
+    logger.error('Erreur getFinancialReport:', error)
+    res.status(500).json({ 
+      success: false,
+      message: 'Erreur interne du serveur', 
+      error: error.message 
+    })
   }
 }
 
@@ -114,13 +369,19 @@ export const getTransactionById = async (req, res) => {
     })
     
     if (!transaction) {
-      return res.status(404).json({ message: 'Transaction non trouvée' })
+      return res.status(404).json({ 
+        success: false,
+        message: 'Transaction non trouvée' 
+      })
     }
     
     res.json({ success: true, data: transaction })
   } catch (error) {
     logger.error('Erreur getTransactionById:', error)
-    res.status(500).json({ message: 'Erreur interne du serveur' })
+    res.status(500).json({ 
+      success: false,
+      message: 'Erreur interne du serveur' 
+    })
   }
 }
 
@@ -131,58 +392,140 @@ export const getTransactionById = async (req, res) => {
  */
 export const createTransaction = async (req, res) => {
   try {
+    console.log('💰 Création d\'une transaction - Body reçu:', req.body)
+    
     const { type, categorieId, membreId, montant, devise, dateTransaction, description, justificatif } = req.body
     
-    if (!type || !categorieId || !montant || !devise) {
-      return res.status(400).json({ message: 'Type, catégorie, montant et devise sont requis' })
+    // ✅ Validation des champs requis
+    const errors = []
+    
+    if (!type) {
+      errors.push({ field: 'type', message: 'Le type est requis' })
     }
     
-    if (type === 'entree' && !membreId) {
-      return res.status(400).json({ message: 'Pour une entrée, le membre est requis' })
+    if (!categorieId) {
+      errors.push({ field: 'categorieId', message: 'La catégorie est requise' })
     }
     
-    if (montant <= 0) {
-      return res.status(400).json({ message: 'Le montant doit être supérieur à 0' })
+    if (!montant) {
+      errors.push({ field: 'montant', message: 'Le montant est requis' })
     }
     
-    if (!['USD', 'CDF'].includes(devise)) {
-      return res.status(400).json({ message: 'Devise invalide. Utilisez USD ou CDF' })
+    if (!devise) {
+      errors.push({ field: 'devise', message: 'La devise est requise' })
     }
     
-    // Vérifier que la catégorie existe et correspond au type
+    if (errors.length > 0) {
+      console.log('❌ Erreurs de validation:', errors)
+      return res.status(400).json({ 
+        success: false,
+        message: 'Erreur de validation des données.',
+        errors
+      })
+    }
+    
+    // ✅ Normaliser le type
+    const normalizedType = normalizeType(type)
+    console.log(`📝 Type normalisé: ${type} -> ${normalizedType}`)
+    
+    if (!normalizedType || !['entree', 'sortie'].includes(normalizedType)) {
+      console.log(`❌ Type invalide: ${type}`)
+      return res.status(400).json({ 
+        success: false,
+        message: 'Type invalide. Utilisez entree ou sortie' 
+      })
+    }
+    
+    // ✅ Vérification pour les entrées (membreId requis)
+    // ✅ Pour les sorties, membreId est optionnel
+    if (normalizedType === 'entree' && !membreId) {
+      console.log('❌ Membre manquant pour une entrée')
+      return res.status(400).json({ 
+        success: false,
+        message: 'Pour une entrée, le membre est requis' 
+      })
+    }
+    
+    // ✅ Vérification du montant
+    const montantNum = parseFloat(montant)
+    if (isNaN(montantNum) || montantNum <= 0) {
+      console.log(`❌ Montant invalide: ${montant}`)
+      return res.status(400).json({ 
+        success: false,
+        message: 'Le montant doit être un nombre supérieur à 0' 
+      })
+    }
+    
+    // ✅ Normaliser la devise
+    const normalizedDevise = normalizeDevise(devise)
+    console.log(`💵 Devise normalisée: ${devise} -> ${normalizedDevise}`)
+    
+    if (!['USD', 'CDF'].includes(normalizedDevise)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Devise invalide. Utilisez USD ou CDF' 
+      })
+    }
+    
+    // ✅ Vérifier que la catégorie existe
+    console.log(`🔍 Recherche de la catégorie: ${categorieId}`)
     const categorie = await prisma.categorie.findUnique({
       where: { id: categorieId }
     })
     
     if (!categorie) {
-      return res.status(404).json({ message: 'Catégorie non trouvée' })
-    }
-    
-    if (categorie.type !== type) {
-      return res.status(400).json({ 
-        message: `Cette catégorie est de type "${categorie.type}" mais vous essayez de créer une ${type}. Veuillez utiliser une catégorie de type "${type}".` 
+      console.log(`❌ Catégorie non trouvée: ${categorieId}`)
+      return res.status(404).json({ 
+        success: false,
+        message: 'Catégorie non trouvée' 
       })
     }
     
-    // Calculer les montants convertis
-    const tauxChange = DEFAULT_TX_RATE
-    const montantUSD = devise === 'USD' ? montant : convertirMontant(montant, 'CDF', 'USD', tauxChange)
-    const montantCDF = devise === 'CDF' ? montant : convertirMontant(montant, 'USD', 'CDF', tauxChange)
+    console.log(`📂 Catégorie trouvée: ${categorie.nom} (${categorie.type})`)
     
+    // ✅ Normaliser le type de la catégorie pour la comparaison
+    const categorieType = normalizeType(categorie.type)
+    console.log(`📝 Type catégorie normalisé: ${categorie.type} -> ${categorieType}`)
+    
+    // ✅ Vérifier que le type de la catégorie correspond
+    let isValidCategory = false
+    
+    if (normalizedType === 'entree' && categorieType === 'entree') {
+      isValidCategory = true
+    } else if (normalizedType === 'sortie' && categorieType === 'sortie') {
+      isValidCategory = true
+    }
+    
+    if (!isValidCategory) {
+      console.log(`❌ Type de catégorie incorrect: ${categorie.type} pour ${normalizedType}`)
+      return res.status(400).json({ 
+        success: false,
+        message: `Cette catégorie est de type "${categorie.type}" mais vous essayez de créer une ${normalizedType}.` 
+      })
+    }
+    
+    // ✅ Calculer les montants convertis
+    const tauxChange = DEFAULT_TX_RATE
+    const montantUSD = normalizedDevise === 'USD' ? montantNum : montantNum / tauxChange
+    const montantCDF = normalizedDevise === 'CDF' ? montantNum : montantNum * tauxChange
+    
+    console.log(`💰 Montant: ${montantNum} ${normalizedDevise} (USD: ${montantUSD}, CDF: ${montantCDF})`)
+    
+    // ✅ Créer la transaction
     const transaction = await prisma.transaction.create({
       data: {
-        type,
-        categorieId,
+        type: normalizedType,
+        categorieId: categorieId,
         membreId: membreId || null,
-        montant: parseFloat(montant),
-        devise,
-        tauxChange,
-        montantUSD,
-        montantCDF,
+        montant: montantNum,
+        devise: normalizedDevise,
+        tauxChange: tauxChange,
+        montantUsd: montantUSD,
+        montantCdf: montantCDF,
         dateTransaction: dateTransaction ? new Date(dateTransaction) : new Date(),
-        description,
-        justificatif,
-        createdBy: req.user.id
+        description: description || null,
+        justificatif: justificatif || null,
+        createdBy: req.user?.id || null
       },
       include: {
         categorie: true,
@@ -192,22 +535,61 @@ export const createTransaction = async (req, res) => {
       }
     })
     
-    await prisma.logActivite.create({
-      data: {
-        utilisateurId: req.user.id,
-        action: 'CREATE',
-        tableName: 'transactions',
-        recordId: transaction.id,
-        details: { type, montant, devise, description },
-        ipAddress: req.ip
-      }
+    console.log(`✅ Transaction créée avec succès: ${transaction.id}`)
+    
+    // ✅ Log d'activité
+    try {
+      await prisma.logActivite.create({
+        data: {
+          utilisateurId: req.user?.id || null,
+          action: 'CREATE',
+          tableName: 'transactions',
+          recordId: transaction.id,
+          details: { 
+            type: normalizedType, 
+            montant: montantNum, 
+            devise: normalizedDevise, 
+            description: description || null 
+          },
+          ipAddress: req.ip || null
+        }
+      })
+    } catch (logError) {
+      console.warn('⚠️ Erreur lors de la création du log:', logError.message)
+    }
+    
+    logger.info(`💰 ${normalizedType === 'entree' ? 'Entrée' : 'Sortie'} créée: ${montantNum} ${normalizedDevise} par ${req.user?.email || 'Système'}`)
+    
+    res.status(201).json({ 
+      success: true, 
+      data: transaction, 
+      message: 'Transaction enregistrée avec succès' 
     })
     
-    logger.info(`💰 ${type === 'entree' ? 'Entrée' : 'Sortie'} créée: ${montant} ${devise} par ${req.user.email}`)
-    res.status(201).json({ success: true, data: transaction, message: 'Transaction enregistrée avec succès' })
   } catch (error) {
+    console.error('❌ Erreur createTransaction:', error)
+    console.error('❌ Stack:', error.stack)
     logger.error('Erreur createTransaction:', error)
-    res.status(500).json({ message: 'Erreur interne du serveur' })
+    
+    if (error.code === 'P2002') {
+      return res.status(400).json({
+        success: false,
+        message: 'Une transaction avec ces informations existe déjà'
+      })
+    }
+    
+    if (error.code === 'P2025') {
+      return res.status(404).json({
+        success: false,
+        message: 'Ressource associée non trouvée'
+      })
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      message: 'Erreur interne du serveur', 
+      error: error.message 
+    })
   }
 }
 
@@ -221,51 +603,78 @@ export const updateTransaction = async (req, res) => {
     const { id } = req.params
     const { type, categorieId, membreId, montant, devise, dateTransaction, description, justificatif } = req.body
     
+    console.log(`✏️ Modification de la transaction: ${id}`)
+    
     const transactionExistant = await prisma.transaction.findUnique({
       where: { id }
     })
     
     if (!transactionExistant) {
-      return res.status(404).json({ message: 'Transaction non trouvée' })
+      return res.status(404).json({ 
+        success: false,
+        message: 'Transaction non trouvée' 
+      })
+    }
+    
+    let normalizedType = null
+    if (type) {
+      normalizedType = normalizeType(type)
+      if (!normalizedType || !['entree', 'sortie'].includes(normalizedType)) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Type invalide. Utilisez entree ou sortie' 
+        })
+      }
     }
     
     if (categorieId) {
       const categorie = await prisma.categorie.findUnique({
         where: { id: categorieId }
       })
-      if (categorie && categorie.type !== (type || transactionExistant.type)) {
-        return res.status(400).json({ message: 'La catégorie ne correspond pas au type de transaction' })
+      
+      if (!categorie) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'Catégorie non trouvée' 
+        })
+      }
+      
+      const finalType = normalizedType || transactionExistant.type
+      const categorieType = normalizeType(categorie.type)
+      
+      let isValidCategory = false
+      if (finalType === 'entree' && categorieType === 'entree') {
+        isValidCategory = true
+      } else if (finalType === 'sortie' && categorieType === 'sortie') {
+        isValidCategory = true
+      }
+      
+      if (!isValidCategory) {
+        return res.status(400).json({ 
+          success: false,
+          message: `Cette catégorie est de type "${categorie.type}" mais vous essayez de créer une ${finalType}.` 
+        })
       }
     }
     
-    // Recalculer les montants convertis si devise ou montant change
-    let montantUSD = transactionExistant.montantUSD
-    let montantCDF = transactionExistant.montantCDF
-    let newDevise = devise || transactionExistant.devise
-    let newMontant = montant ? parseFloat(montant) : transactionExistant.montant
+    const newDevise = devise ? normalizeDevise(devise) : transactionExistant.devise
+    const newMontant = montant ? parseFloat(montant) : transactionExistant.montant
+    const tauxChange = DEFAULT_TX_RATE
     
-    if (devise !== transactionExistant.devise || montant) {
-      const tauxChange = DEFAULT_TX_RATE
-      if (newDevise === 'USD') {
-        montantUSD = newMontant
-        montantCDF = convertirMontant(newMontant, 'USD', 'CDF', tauxChange)
-      } else {
-        montantUSD = convertirMontant(newMontant, 'CDF', 'USD', tauxChange)
-        montantCDF = newMontant
-      }
-    }
+    const montantUSD = newDevise === 'USD' ? newMontant : newMontant / tauxChange
+    const montantCDF = newDevise === 'CDF' ? newMontant : newMontant * tauxChange
     
     const transaction = await prisma.transaction.update({
       where: { id },
       data: {
-        type: type || transactionExistant.type,
+        type: normalizedType || transactionExistant.type,
         categorieId: categorieId || transactionExistant.categorieId,
         membreId: membreId !== undefined ? membreId : transactionExistant.membreId,
         montant: newMontant,
         devise: newDevise,
-        tauxChange: DEFAULT_TX_RATE,
-        montantUSD,
-        montantCDF,
+        tauxChange: tauxChange,
+        montantUsd: montantUSD,
+        montantCdf: montantCDF,
         dateTransaction: dateTransaction ? new Date(dateTransaction) : transactionExistant.dateTransaction,
         description: description !== undefined ? description : transactionExistant.description,
         justificatif: justificatif !== undefined ? justificatif : transactionExistant.justificatif
@@ -275,6 +684,8 @@ export const updateTransaction = async (req, res) => {
         membre: true
       }
     })
+    
+    console.log(`✅ Transaction modifiée: ${id}`)
     
     await prisma.logActivite.create({
       data: {
@@ -288,10 +699,18 @@ export const updateTransaction = async (req, res) => {
     })
     
     logger.info(`✏️ Transaction modifiée: ${id} par ${req.user.email}`)
-    res.json({ success: true, data: transaction, message: 'Transaction modifiée avec succès' })
+    res.json({ 
+      success: true, 
+      data: transaction, 
+      message: 'Transaction modifiée avec succès' 
+    })
   } catch (error) {
+    console.error('❌ Erreur updateTransaction:', error)
     logger.error('Erreur updateTransaction:', error)
-    res.status(500).json({ message: 'Erreur interne du serveur' })
+    res.status(500).json({ 
+      success: false,
+      message: 'Erreur interne du serveur' 
+    })
   }
 }
 
@@ -304,15 +723,22 @@ export const deleteTransaction = async (req, res) => {
   try {
     const { id } = req.params
     
+    console.log(`🗑️ Suppression de la transaction: ${id}`)
+    
     const transaction = await prisma.transaction.findUnique({
       where: { id }
     })
     
     if (!transaction) {
-      return res.status(404).json({ message: 'Transaction non trouvée' })
+      return res.status(404).json({ 
+        success: false,
+        message: 'Transaction non trouvée' 
+      })
     }
     
     await prisma.transaction.delete({ where: { id } })
+    
+    console.log(`✅ Transaction supprimée: ${id}`)
     
     await prisma.logActivite.create({
       data: {
@@ -320,182 +746,26 @@ export const deleteTransaction = async (req, res) => {
         action: 'DELETE',
         tableName: 'transactions',
         recordId: id,
-        details: { montant: transaction.montant, type: transaction.type, devise: transaction.devise },
+        details: { 
+          montant: String(transaction.montant), 
+          type: transaction.type, 
+          devise: transaction.devise 
+        },
         ipAddress: req.ip
       }
     })
     
     logger.info(`🗑️ Transaction supprimée: ${id} par ${req.user.email}`)
-    res.json({ success: true, message: 'Transaction supprimée avec succès' })
+    res.json({ 
+      success: true, 
+      message: 'Transaction supprimée avec succès' 
+    })
   } catch (error) {
+    console.error('❌ Erreur deleteTransaction:', error)
     logger.error('Erreur deleteTransaction:', error)
-    res.status(500).json({ message: 'Erreur interne du serveur' })
-  }
-}
-
-/**
- * @desc    Rapport financier avec gestion des devises
- * @route   GET /api/transactions/report/summary
- * @access  Private (Pasteur, Tresorier, Admin)
- */
-export const getFinancialReport = async (req, res) => {
-  try {
-    const { periode = 'year', dateDebut, dateFin } = req.query
-    
-    let startDate, endDate
-    
-    if (dateDebut && dateFin) {
-      startDate = new Date(dateDebut)
-      endDate = new Date(dateFin)
-    } else {
-      endDate = new Date()
-      startDate = new Date()
-      
-      switch (periode) {
-        case 'week':
-          startDate.setDate(startDate.getDate() - 7)
-          break
-        case 'month':
-          startDate.setMonth(startDate.getMonth() - 1)
-          break
-        case 'year':
-          startDate.setFullYear(startDate.getFullYear() - 1)
-          break
-        default:
-          startDate.setFullYear(startDate.getFullYear() - 1)
-      }
-    }
-    
-    console.log('📊 RAPPORT - Période:', { startDate, endDate, periode })
-    
-    // Récupérer TOUTES les transactions
-    const transactions = await prisma.transaction.findMany({
-      where: {
-        dateTransaction: {
-          gte: startDate,
-          lte: endDate
-        }
-      },
-      include: {
-        categorie: true,
-        membre: {
-          select: { nom: true, prenom: true }
-        }
-      }
+    res.status(500).json({ 
+      success: false,
+      message: 'Erreur interne du serveur' 
     })
-    
-    console.log(`📊 Total transactions: ${transactions.length}`)
-    
-    // Initialiser les statistiques par devise
-    const statsParDevise = {
-      USD: { entrees: 0, sorties: 0, solde: 0, nombre: 0 },
-      CDF: { entrees: 0, sorties: 0, solde: 0, nombre: 0 }
-    }
-    
-    // Parcourir TOUTES les transactions
-    for (const t of transactions) {
-      const devise = t.devise || 'CDF'
-      const montant = parseFloat(t.montant)
-      
-      if (t.type === 'entree') {
-        statsParDevise[devise].entrees += montant
-        statsParDevise[devise].nombre++
-      } else {
-        statsParDevise[devise].sorties += montant
-      }
-    }
-    
-    // Calculer les soldes
-    statsParDevise.USD.solde = statsParDevise.USD.entrees - statsParDevise.USD.sorties
-    statsParDevise.CDF.solde = statsParDevise.CDF.entrees - statsParDevise.CDF.sorties
-    
-    console.log('📊 Stats USD:', statsParDevise.USD)
-    console.log('📊 Stats CDF:', statsParDevise.CDF)
-    
-    // Calculer les totaux en CDF (pour le résumé global)
-    let totalEntreesCDF = statsParDevise.CDF.entrees + (statsParDevise.USD.entrees * DEFAULT_TX_RATE)
-    let totalSortiesCDF = statsParDevise.CDF.sorties + (statsParDevise.USD.sorties * DEFAULT_TX_RATE)
-    
-    // Calculer les totaux par catégorie (en CDF)
-    const entreesParCategorie = {}
-    const sortiesParCategorie = {}
-    
-    for (const t of transactions) {
-      const catName = t.categorie?.nom || 'Sans catégorie'
-      let montant = parseFloat(t.montant)
-      
-      // Convertir en CDF pour l'affichage
-      if (t.devise === 'USD') {
-        montant = montant * DEFAULT_TX_RATE
-      }
-      
-      if (t.type === 'entree') {
-        entreesParCategorie[catName] = (entreesParCategorie[catName] || 0) + montant
-      } else {
-        sortiesParCategorie[catName] = (sortiesParCategorie[catName] || 0) + montant
-      }
-    }
-    
-    // Données pour l'évolution mensuelle (en CDF)
-    const evolutionMensuelle = []
-    const moisTransactions = {}
-    
-    for (const t of transactions) {
-      const date = new Date(t.dateTransaction)
-      const moisKey = `${date.getFullYear()}-${date.getMonth() + 1}`
-      const moisLabel = date.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })
-      let montant = parseFloat(t.montant)
-      
-      if (t.devise === 'USD') {
-        montant = montant * DEFAULT_TX_RATE
-      }
-      
-      if (!moisTransactions[moisKey]) {
-        moisTransactions[moisKey] = { mois: moisLabel, entrees: 0, sorties: 0 }
-      }
-      
-      if (t.type === 'entree') {
-        moisTransactions[moisKey].entrees += montant
-      } else {
-        moisTransactions[moisKey].sorties += montant
-      }
-    }
-    
-    for (const key in moisTransactions) {
-      evolutionMensuelle.push(moisTransactions[key])
-    }
-    evolutionMensuelle.sort((a, b) => {
-      const moisOrder = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
-      return moisOrder.indexOf(a.mois.split(' ')[0]) - moisOrder.indexOf(b.mois.split(' ')[0])
-    })
-    
-    res.json({
-      success: true,
-      data: {
-        periode: { debut: startDate, fin: endDate },
-        tauxChange: DEFAULT_TX_RATE,
-        statsParDevise,
-        total: {
-          entrees: totalEntreesCDF,
-          sorties: totalSortiesCDF,
-          solde: totalEntreesCDF - totalSortiesCDF
-        },
-        entreesParCategorie,
-        sortiesParCategorie,
-        evolutionMensuelle,
-        nombreTransactions: {
-          entrees: transactions.filter(t => t.type === 'entree').length,
-          sorties: transactions.filter(t => t.type === 'sortie').length,
-          parDevise: {
-            USD: statsParDevise.USD.nombre,
-            CDF: statsParDevise.CDF.nombre
-          }
-        }
-      }
-    })
-  } catch (error) {
-    console.error('❌ Erreur getFinancialReport:', error)
-    logger.error('Erreur getFinancialReport:', error)
-    res.status(500).json({ message: 'Erreur interne du serveur', error: error.message })
   }
 }
