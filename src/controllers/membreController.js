@@ -1,3 +1,4 @@
+// backend/src/controllers/membreController.js
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
 
@@ -28,7 +29,7 @@ export const getMembres = async (req, res) => {
     
     // 🔒 Le secrétaire ne voit pas les administrateurs
     if (req.user.role === 'secretaire') {
-      where.utilisateurs = { // ✅ CORRECTION: utilisateurs (pluriel)
+      where.utilisateurs = {
         NOT: {
           role: 'administrateur'
         }
@@ -50,7 +51,7 @@ export const getMembres = async (req, res) => {
         where,
         include: {
           departement: true,
-          utilisateurs: { // ✅ CORRECTION: utilisateurs (pluriel)
+          utilisateurs: {
             select: { role: true, actif: true }
           }
         },
@@ -90,7 +91,7 @@ export const getMembreById = async (req, res) => {
       where: { id },
       include: {
         departement: true,
-        utilisateurs: { // ✅ CORRECTION: utilisateurs (pluriel)
+        utilisateurs: {
           select: { role: true, actif: true, email: true, dernierConnexion: true }
         },
         transactions: {
@@ -120,7 +121,7 @@ export const getMembreById = async (req, res) => {
     if (req.user.role === 'secretaire') {
       const membreWithUser = await prisma.membre.findUnique({
         where: { id },
-        include: { utilisateurs: true } // ✅ CORRECTION: utilisateurs (pluriel)
+        include: { utilisateurs: true }
       })
       if (membreWithUser?.utilisateurs?.role === 'administrateur') {
         return res.status(403).json({ message: 'Accès non autorisé' })
@@ -191,18 +192,20 @@ export const updateMembre = async (req, res) => {
     const { id } = req.params
     const { nom, prenom, email, telephone, adresse, dateNaissance, statut, departementId } = req.body
     
-    const membreExistant = await prisma.membre.findUnique({ where: { id } })
+    const membreExistant = await prisma.membre.findUnique({
+      where: { id },
+      include: {
+        utilisateurs: true
+      }
+    })
+    
     if (!membreExistant) {
       return res.status(404).json({ message: 'Membre non trouvé' })
     }
     
     // 🔒 Le secrétaire ne peut pas modifier un administrateur
     if (req.user.role === 'secretaire') {
-      const membreWithUser = await prisma.membre.findUnique({
-        where: { id },
-        include: { utilisateur: true }
-      })
-      if (membreWithUser?.utilisateur?.role === 'administrateur') {
+      if (membreExistant?.utilisateurs?.role === 'administrateur') {
         return res.status(403).json({ message: 'Vous ne pouvez pas modifier un administrateur' })
       }
     }
@@ -219,6 +222,12 @@ export const updateMembre = async (req, res) => {
         statut: statut || membreExistant.statut,
         departementId: departementId !== undefined ? departementId : membreExistant.departementId,
         updatedAt: new Date()
+      },
+      include: {
+        departement: true,
+        utilisateurs: {
+          select: { role: true, actif: true }
+        }
       }
     })
     
@@ -265,6 +274,28 @@ export const deleteMembre = async (req, res) => {
     if (transactions > 0) {
       return res.status(400).json({ 
         message: 'Ce membre a des transactions associées. Impossible de le supprimer.' 
+      })
+    }
+    
+    // Vérifier si le membre est responsable d'un département
+    const departements = await prisma.departement.count({
+      where: { responsableId: id }
+    })
+    
+    if (departements > 0) {
+      return res.status(400).json({ 
+        message: 'Ce membre est responsable d\'un département. Impossible de le supprimer.' 
+      })
+    }
+    
+    // Vérifier si le membre a un compte utilisateur
+    const utilisateur = await prisma.utilisateur.findFirst({
+      where: { membreId: id }
+    })
+    
+    if (utilisateur) {
+      return res.status(400).json({ 
+        message: 'Ce membre a un compte utilisateur associé. Supprimez d\'abord le compte utilisateur.' 
       })
     }
     
@@ -321,7 +352,7 @@ export const getMembreStats = async (req, res) => {
         total,
         actifs,
         inactifs,
-        tauxActivite: ((actifs / total) * 100).toFixed(2),
+        tauxActivite: total > 0 ? ((actifs / total) * 100).toFixed(2) : '0.00',
         parDepartement: statsParDepartement
       }
     })
