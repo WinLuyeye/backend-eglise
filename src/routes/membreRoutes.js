@@ -1,380 +1,506 @@
-import express from 'express'
-import { 
-  getMembres,
-  getMembreById,
-  createMembre,
-  updateMembre,
-  deleteMembre,
-  getMembreStats
-} from '../controllers/membreController.js'
-import { verifyToken } from '../middlewares/authMiddleware.js'
-import { 
-  checkRole,
-  isSecretaireOrAdmin,
-  isAdmin
-} from '../middlewares/roleMiddleware.js'
-import {
-  validateMembre,
-  validateMembreId,
-  validatePagination,
-  validateMembreUpdate
-} from '../middlewares/validationMiddleware.js'
-
-const router = express.Router()
-
-// ============================================
-// MIDDLEWARE D'AUTHENTIFICATION GLOBAL
-// ============================================
-// Toutes les routes après ce point nécessitent un token valide
-router.use(verifyToken)
+// backend/src/controllers/membreController.js
+import prisma from "../utils/prisma.js";
+import logger from "../utils/logger.js";
 
 /**
- * @swagger
- * tags:
- *   name: Membres
- *   description: Gestion des membres de l'église
+ * @desc    Obtenir tous les membres
+ * @route   GET /api/membres
+ * @access  Private (Pasteur, Secretaire, Admin, Chef dept)
  */
+export const getMembres = async (req, res) => {
+  try {
+    const { page = 1, limit = 50, statut, departementId, search } = req.query;
+    const skip = (page - 1) * limit;
+
+    let where = {};
+
+    // 🔒 Chef département voit seulement son département
+    if (req.user.role === 'chef_departement') {
+      const membre = await prisma.membre.findUnique({
+        where: { id: req.user.membreId }
+      });
+
+      if (!membre?.departementId) {
+        return res.status(403).json({ message: 'Vous n\'êtes pas assigné à un département' });
+      }
+
+      where.departementId = membre.departementId;
+    }
+
+    // 🔒 Le secrétaire ne voit pas les administrateurs
+    if (req.user.role === 'secretaire') {
+      // Solution alternative plus robuste pour la production
+      try {
+        // Récupérer les IDs des administrateurs
+        const adminUsers = await prisma.utilisateur.findMany({
+          where: { role: 'administrateur' },
+          select: { membreId: true }
+        });
+
+        const adminMembreIds = adminUsers
+          .map(u => u.membreId)
+          .filter(id => id !== null);
+
+        if (adminMembreIds.length > 0) {
+          where = {
+            ...where,
+            NOT: {
+              id: {
+                in: adminMembreIds
+              }
+            }
+          };
+        }
+      } catch (adminError) {
+        logger.warn('⚠️ Erreur lors de la récupération des administrateurs:', adminError.message);
+        // Fallback: utiliser la syntaxe originale si la première méthode échoue
+        where = {
+          ...where,
+          NOT: {
+            utilisateur: {  // ✅ CORRIGÉ : utilisateurs → utilisateur
+              role: 'administrateur'
+            }
+          }
+        };
+      }
+    }
+
+    if (statut) where.statut = statut;
+    if (departementId && req.user.role !== 'chef_departement') where.departementId = departementId;
+    if (search) {
+      where.OR = [
+        { nom: { contains: search, mode: 'insensitive' } },
+        { prenom: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    // Log de la requête pour débogage (uniquement en développement)
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug('🔍 Requête getMembres:', JSON.stringify({
+        where,
+        include: {
+          departement: true,
+          utilisateur: { select: { role: true, actif: true } }  // ✅ CORRIGÉ
+        },
+        skip: parseInt(skip),
+        take: parseInt(limit),
+        orderBy: { nom: 'asc' }
+      }, null, 2));
+    }
+
+    const [membres, total] = await Promise.all([
+      prisma.membre.findMany({
+        where,
+        include: {
+          departement: true,
+          utilisateur: {  // ✅ CORRIGÉ : utilisateurs → utilisateur
+            select: { role: true, actif: true }
+          }
+        },
+        skip: parseInt(skip),
+        take: parseInt(limit),
+        orderBy: { nom: 'asc' }
+      }),
+      prisma.membre.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: membres,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    // Log détaillé de l'erreur
+    logger.error('❌ Erreur getMembres:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: error.stack
+    });
+
+    // Envoyer plus de détails en développement
+    const errorResponse = {
+      message: 'Erreur interne du serveur'
+    };
+
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.details = error.message;
+      errorResponse.code = error.code;
+    }
+
+    res.status(500).json(errorResponse);
+  }
+};
 
 /**
- * @swagger
- * /membres:
- *   get:
- *     summary: Liste tous les membres
- *     tags: [Membres]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *         description: Numéro de la page
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 50
- *         description: Nombre d'éléments par page
- *       - in: query
- *         name: statut
- *         schema:
- *           type: string
- *           enum: [actif, inactif, transfere]
- *         description: Filtrer par statut
- *       - in: query
- *         name: departementId
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Filtrer par département
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Rechercher par nom, prénom ou email
- *     responses:
- *       200:
- *         description: Liste des membres récupérée avec succès
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Membre'
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     page:
- *                       type: integer
- *                     limit:
- *                       type: integer
- *                     total:
- *                       type: integer
- *                     pages:
- *                       type: integer
- *       401:
- *         description: Non authentifié
- *       403:
- *         description: Accès refusé
+ * @desc    Obtenir un membre par ID
+ * @route   GET /api/membres/:id
+ * @access  Private
  */
-router.get('/', validatePagination, getMembres)
+export const getMembreById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const membre = await prisma.membre.findUnique({
+      where: { id },
+      include: {
+        departement: true,
+        utilisateur: {  // ✅ CORRIGÉ : utilisateurs → utilisateur
+          select: {
+            role: true,
+            actif: true,
+            email: true,
+            dernierConnexion: true,
+          },
+        },
+        transactions: {
+          take: 10,
+          orderBy: { dateTransaction: "desc" },
+          include: { categorie: true },
+        },
+        responsableDe: true,
+      },
+    });
+
+    if (!membre) {
+      return res.status(404).json({ message: "Membre non trouvé" });
+    }
+
+    // Vérifier les permissions pour chef département
+    if (req.user.role === "chef_departement") {
+      const userMembre = await prisma.membre.findUnique({
+        where: { id: req.user.membreId },
+      });
+      if (
+        membre.departementId !== userMembre.departementId &&
+        req.user.membreId !== id
+      ) {
+        return res
+          .status(403)
+          .json({ message: "Accès non autorisé à ce membre" });
+      }
+    }
+
+    // 🔒 Le secrétaire ne peut pas voir un administrateur
+    if (req.user.role === "secretaire") {
+      const membreWithUser = await prisma.membre.findUnique({
+        where: { id },
+        include: { utilisateur: true },  // ✅ CORRIGÉ : utilisateurs → utilisateur
+      });
+      if (membreWithUser?.utilisateur?.role === "administrateur") {  // ✅ CORRIGÉ
+        return res.status(403).json({ message: "Accès non autorisé" });
+      }
+    }
+
+    res.json({ success: true, data: membre });
+  } catch (error) {
+    logger.error("❌ Erreur getMembreById:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: "Erreur interne du serveur",
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
+  }
+};
 
 /**
- * @swagger
- * /membres/stats/global:
- *   get:
- *     summary: Statistiques globales des membres
- *     tags: [Membres]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Statistiques récupérées avec succès
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: integer
- *                     actifs:
- *                       type: integer
- *                     inactifs:
- *                       type: integer
- *                     tauxActivite:
- *                       type: string
- *                     parDepartement:
- *                       type: array
- *       401:
- *         description: Non authentifié
- *       403:
- *         description: Accès refusé - Réservé au Pasteur et Admin
+ * @desc    Créer un membre
+ * @route   POST /api/membres
+ * @access  Private (Secretaire, Admin)
  */
-router.get('/stats/global', checkRole('pasteur', 'administrateur'), getMembreStats)
+export const createMembre = async (req, res) => {
+  try {
+    const {
+      nom,
+      prenom,
+      email,
+      telephone,
+      adresse,
+      dateNaissance,
+      departementId,
+    } = req.body;
+
+    if (!nom || !prenom) {
+      return res.status(400).json({ message: "Le nom et prénom sont requis" });
+    }
+
+    const membre = await prisma.membre.create({
+      data: {
+        nom,
+        prenom,
+        email,
+        telephone,
+        adresse,
+        dateNaissance: dateNaissance ? new Date(dateNaissance) : null,
+        departementId: departementId || null,
+      },
+    });
+
+    await prisma.logActivite.create({
+      data: {
+        utilisateurId: req.user.id,
+        action: "CREATE",
+        tableName: "membres",
+        recordId: membre.id,
+        details: { nom, prenom, email },
+        ipAddress: req.ip,
+      },
+    });
+
+    logger.info(`📝 Membre créé: ${nom} ${prenom} par ${req.user.email}`);
+    res
+      .status(201)
+      .json({
+        success: true,
+        data: membre,
+        message: "Membre créé avec succès",
+      });
+  } catch (error) {
+    if (error.code === "P2002") {
+      return res.status(400).json({ message: "Cet email est déjà utilisé" });
+    }
+    logger.error("❌ Erreur createMembre:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: "Erreur interne du serveur",
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
+  }
+};
 
 /**
- * @swagger
- * /membres/{id}:
- *   get:
- *     summary: Récupère un membre par son ID
- *     tags: [Membres]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID du membre
- *     responses:
- *       200:
- *         description: Membre récupéré avec succès
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Membre'
- *       401:
- *         description: Non authentifié
- *       404:
- *         description: Membre non trouvé
+ * @desc    Modifier un membre
+ * @route   PUT /api/membres/:id
+ * @access  Private (Secretaire, Admin)
  */
-router.get('/:id', validateMembreId, getMembreById)
+export const updateMembre = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      nom,
+      prenom,
+      email,
+      telephone,
+      adresse,
+      dateNaissance,
+      statut,
+      departementId,
+    } = req.body;
+
+    const membreExistant = await prisma.membre.findUnique({
+      where: { id },
+      include: {
+        utilisateur: true,  // ✅ CORRIGÉ : utilisateurs → utilisateur
+      },
+    });
+
+    if (!membreExistant) {
+      return res.status(404).json({ message: "Membre non trouvé" });
+    }
+
+    // 🔒 Le secrétaire ne peut pas modifier un administrateur
+    if (req.user.role === "secretaire") {
+      if (membreExistant?.utilisateur?.role === "administrateur") {  // ✅ CORRIGÉ
+        return res
+          .status(403)
+          .json({ message: "Vous ne pouvez pas modifier un administrateur" });
+      }
+    }
+
+    const membre = await prisma.membre.update({
+      where: { id },
+      data: {
+        nom: nom || membreExistant.nom,
+        prenom: prenom || membreExistant.prenom,
+        email: email !== undefined ? email : membreExistant.email,
+        telephone: telephone !== undefined ? telephone : membreExistant.telephone,
+        adresse: adresse !== undefined ? adresse : membreExistant.adresse,
+        dateNaissance: dateNaissance
+          ? new Date(dateNaissance)
+          : membreExistant.dateNaissance,
+        statut: statut || membreExistant.statut,
+        departementId: departementId !== undefined
+          ? departementId
+          : membreExistant.departementId,
+        updatedAt: new Date(),
+      },
+      include: {
+        departement: true,
+        utilisateur: {  // ✅ CORRIGÉ : utilisateurs → utilisateur
+          select: { role: true, actif: true },
+        },
+      },
+    });
+
+    await prisma.logActivite.create({
+      data: {
+        utilisateurId: req.user.id,
+        action: "UPDATE",
+        tableName: "membres",
+        recordId: membre.id,
+        details: { modifications: req.body },
+        ipAddress: req.ip,
+      },
+    });
+
+    logger.info(`✏️ Membre modifié: ${id} par ${req.user.email}`);
+    res.json({
+      success: true,
+      data: membre,
+      message: "Membre modifié avec succès",
+    });
+  } catch (error) {
+    if (error.code === "P2002") {
+      return res.status(400).json({ message: "Cet email est déjà utilisé" });
+    }
+    logger.error("❌ Erreur updateMembre:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: "Erreur interne du serveur",
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
+  }
+};
 
 /**
- * @swagger
- * /membres:
- *   post:
- *     summary: Crée un nouveau membre
- *     tags: [Membres]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - nom
- *               - prenom
- *             properties:
- *               nom:
- *                 type: string
- *                 example: "MARTIN"
- *                 description: Nom du membre
- *               prenom:
- *                 type: string
- *                 example: "Jean"
- *                 description: Prénom du membre
- *               email:
- *                 type: string
- *                 format: email
- *                 example: "jean.martin@eglise.com"
- *                 description: Email du membre
- *               telephone:
- *                 type: string
- *                 example: "+221771234567"
- *                 description: Téléphone
- *               adresse:
- *                 type: string
- *                 example: "12 Rue de l'Église, Dakar"
- *                 description: Adresse
- *               dateNaissance:
- *                 type: string
- *                 format: date
- *                 example: "1975-03-15"
- *                 description: Date de naissance
- *               departementId:
- *                 type: string
- *                 format: uuid
- *                 description: ID du département
- *     responses:
- *       201:
- *         description: Membre créé avec succès
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Membre'
- *                 message:
- *                   type: string
- *       400:
- *         description: Données invalides
- *       401:
- *         description: Non authentifié
- *       403:
- *         description: Accès refusé - Réservé au Secrétaire et Admin
- *       409:
- *         description: Email déjà utilisé
+ * @desc    Supprimer un membre
+ * @route   DELETE /api/membres/:id
+ * @access  Private (Admin seulement)
  */
-router.post('/', isSecretaireOrAdmin, validateMembre, createMembre)
+export const deleteMembre = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (req.user.role !== "administrateur") {
+      return res
+        .status(403)
+        .json({ message: "Seul l'administrateur peut supprimer un membre" });
+    }
+
+    // Vérifier si le membre a des transactions
+    const transactions = await prisma.transaction.count({
+      where: { membreId: id },
+    });
+
+    if (transactions > 0) {
+      return res.status(400).json({
+        message:
+          "Ce membre a des transactions associées. Impossible de le supprimer.",
+      });
+    }
+
+    // Vérifier si le membre est responsable d'un département
+    const departements = await prisma.departement.count({
+      where: { responsableId: id },
+    });
+
+    if (departements > 0) {
+      return res.status(400).json({
+        message:
+          "Ce membre est responsable d'un département. Impossible de le supprimer.",
+      });
+    }
+
+    // Vérifier si le membre a un compte utilisateur
+    const utilisateur = await prisma.utilisateur.findFirst({
+      where: { membreId: id },
+    });
+
+    if (utilisateur) {
+      return res.status(400).json({
+        message:
+          "Ce membre a un compte utilisateur associé. Supprimez d'abord le compte utilisateur.",
+      });
+    }
+
+    await prisma.membre.delete({ where: { id } });
+
+    await prisma.logActivite.create({
+      data: {
+        utilisateurId: req.user.id,
+        action: "DELETE",
+        tableName: "membres",
+        recordId: id,
+        ipAddress: req.ip,
+      },
+    });
+
+    logger.info(`🗑️ Membre supprimé: ${id} par ${req.user.email}`);
+    res.json({ success: true, message: "Membre supprimé avec succès" });
+  } catch (error) {
+    logger.error("❌ Erreur deleteMembre:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: "Erreur interne du serveur",
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
+  }
+};
 
 /**
- * @swagger
- * /membres/{id}:
- *   put:
- *     summary: Modifie un membre existant
- *     tags: [Membres]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID du membre
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               nom:
- *                 type: string
- *                 example: "MARTIN"
- *                 description: Nom du membre
- *               prenom:
- *                 type: string
- *                 example: "Jean"
- *                 description: Prénom du membre
- *               email:
- *                 type: string
- *                 format: email
- *                 example: "jean.martin@eglise.com"
- *                 description: Email du membre
- *               telephone:
- *                 type: string
- *                 example: "+221771234567"
- *                 description: Téléphone
- *               adresse:
- *                 type: string
- *                 example: "12 Rue de l'Église, Dakar"
- *                 description: Adresse
- *               dateNaissance:
- *                 type: string
- *                 format: date
- *                 example: "1975-03-15"
- *                 description: Date de naissance
- *               statut:
- *                 type: string
- *                 enum: [actif, inactif, transfere]
- *                 description: Statut du membre
- *               departementId:
- *                 type: string
- *                 format: uuid
- *                 description: ID du département
- *     responses:
- *       200:
- *         description: Membre modifié avec succès
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Membre'
- *                 message:
- *                   type: string
- *       400:
- *         description: Données invalides
- *       401:
- *         description: Non authentifié
- *       403:
- *         description: Accès refusé - Réservé au Secrétaire et Admin
- *       404:
- *         description: Membre non trouvé
- *       409:
- *         description: Email déjà utilisé
+ * @desc    Statistiques des membres
+ * @route   GET /api/membres/stats/global
+ * @access  Private (Pasteur, Admin)
  */
-router.put('/:id', isSecretaireOrAdmin, validateMembreId, validateMembreUpdate, updateMembre)
+export const getMembreStats = async (req, res) => {
+  try {
+    const [total, actifs, inactifs, parDepartement] = await Promise.all([
+      prisma.membre.count(),
+      prisma.membre.count({ where: { statut: "actif" } }),
+      prisma.membre.count({ where: { statut: "inactif" } }),
+      prisma.membre.groupBy({
+        by: ["departementId"],
+        _count: true,
+        where: { departementId: { not: null } },
+      }),
+    ]);
 
-/**
- * @swagger
- * /membres/{id}:
- *   delete:
- *     summary: Supprime un membre
- *     tags: [Membres]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID du membre
- *     responses:
- *       200:
- *         description: Membre supprimé avec succès
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *       400:
- *         description: Impossible de supprimer - Membre a des transactions
- *       401:
- *         description: Non authentifié
- *       403:
- *         description: Accès refusé - Réservé à l'Administrateur
- *       404:
- *         description: Membre non trouvé
- */
-router.delete('/:id', isAdmin, validateMembreId, deleteMembre)
+    const departements = await prisma.departement.findMany({
+      where: { id: { in: parDepartement.map((p) => p.departementId) } },
+    });
 
-export default router
+    const statsParDepartement = parDepartement.map((p) => ({
+      departement: departements.find((d) => d.id === p.departementId)?.nom,
+      count: p._count,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        total,
+        actifs,
+        inactifs,
+        tauxActivite: total > 0 ? ((actifs / total) * 100).toFixed(2) : "0.00",
+        parDepartement: statsParDepartement,
+      },
+    });
+  } catch (error) {
+    logger.error("❌ Erreur getMembreStats:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: "Erreur interne du serveur",
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
+  }
+};
