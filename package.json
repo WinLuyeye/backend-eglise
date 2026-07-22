@@ -12,7 +12,9 @@
     "prisma:pull": "prisma db pull",
     "prisma:studio": "prisma studio",
     "prisma:seed": "node prisma/seed.js",
+    "prisma:deploy": "prisma migrate deploy",
     "build": "prisma generate",
+    "postinstall": "prisma generate",
     "users:create": "node scripts/create-users.js",
     "users:list": "node scripts/list-users.js",
     "studio": "npx prisma studio"

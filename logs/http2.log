@@ -100,3 +100,41 @@
 {"level":"http","message":"::1 - - [22/Jul/2026:19:58:43 +0000] \"GET /api/dashboard/global HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1\"","timestamp":"2026-07-22 20:58:43:5843"}
 {"level":"http","message":"GET /api/dashboard/global 200 - 8431ms - ::1","timestamp":"2026-07-22 20:58:43:5843"}
 {"level":"http","message":"::1 - - [22/Jul/2026:19:58:43 +0000] \"GET /api/dashboard/global HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1\"","timestamp":"2026-07-22 20:58:43:5843"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-07-22 22:06:22:622"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"http","message":"GET /api/membres?page=1&limit=50 304 - 3778ms - ::1","timestamp":"2026-07-22 22:06:51:651"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:06:51 +0000] \"GET /api/membres?page=1&limit=50 HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:06:51:651"}
+{"level":"http","message":"GET /api/transactions?page=1&limit=50 304 - 5712ms - ::1","timestamp":"2026-07-22 22:06:53:653"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:06:53 +0000] \"GET /api/transactions?page=1&limit=50 HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:06:53:653"}
+{"level":"http","message":"GET /api/transactions?page=1&limit=50 304 - 2158ms - ::1","timestamp":"2026-07-22 22:06:57:657"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:06:57 +0000] \"GET /api/transactions?page=1&limit=50 HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:06:57:657"}
+{"level":"http","message":"GET /api/membres?page=1&limit=50 304 - 2416ms - ::1","timestamp":"2026-07-22 22:06:57:657"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:06:57 +0000] \"GET /api/membres?page=1&limit=50 HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:06:57:657"}
+{"level":"http","message":"GET /api/membres?page=1&limit=50 304 - 2662ms - ::1","timestamp":"2026-07-22 22:07:23:723"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:07:23 +0000] \"GET /api/membres?page=1&limit=50 HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:07:23:723"}
+{"level":"http","message":"GET /api/membres?page=1&limit=10&search=&statut= 200 - 2210ms - ::1","timestamp":"2026-07-22 22:07:24:724"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:07:24 +0000] \"GET /api/membres?page=1&limit=10&search=&statut= HTTP/1.1\" 200 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:07:24:724"}
+{"level":"http","message":"GET /api/membres?page=1&limit=50 304 - 1110ms - ::1","timestamp":"2026-07-22 22:07:25:725"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:07:25 +0000] \"GET /api/membres?page=1&limit=50 HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:07:25:725"}
+{"level":"http","message":"GET /api/membres?page=1&limit=10&search=&statut= 304 - 1642ms - ::1","timestamp":"2026-07-22 22:07:25:725"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:07:25 +0000] \"GET /api/membres?page=1&limit=10&search=&statut= HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:07:25:725"}
+{"level":"http","message":"GET /api/membres?page=1&limit=50 304 - 1823ms - ::1","timestamp":"2026-07-22 22:07:51:751"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:07:51 +0000] \"GET /api/membres?page=1&limit=50 HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:07:51:751"}
+{"level":"http","message":"GET /api/membres?page=1&limit=10&search=&statut= 304 - 2098ms - ::1","timestamp":"2026-07-22 22:07:51:751"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:07:51 +0000] \"GET /api/membres?page=1&limit=10&search=&statut= HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:07:51:751"}
+{"level":"http","message":"GET /api/membres?page=1&limit=50 304 - 889ms - ::1","timestamp":"2026-07-22 22:07:52:752"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:07:52 +0000] \"GET /api/membres?page=1&limit=50 HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:07:52:752"}
+{"level":"http","message":"GET /api/membres?page=1&limit=10&search=&statut= 304 - 889ms - ::1","timestamp":"2026-07-22 22:07:52:752"}
+{"level":"http","message":"::1 - - [22/Jul/2026:21:07:52 +0000] \"GET /api/membres?page=1&limit=10&search=&statut= HTTP/1.1\" 304 - \"http://localhost:3000/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36\"","timestamp":"2026-07-22 22:07:52:752"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-07-22 22:10:40:1040"}

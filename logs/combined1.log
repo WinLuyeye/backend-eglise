@@ -36280,3 +36280,17 @@
 {"level":"error","message":"Prisma Error: \nInvalid `prisma.transaction.findMany()` invocation:\n\n\nError in connector: Error querying the database: FATAL: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15","timestamp":"2026-07-22 20:58:40:5840"}
 {"clientVersion":"5.22.0","level":"error","message":"Erreur getGlobalDashboard: \nInvalid `prisma.transaction.findMany()` invocation:\n\n\nError in connector: Error querying the database: FATAL: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15","name":"PrismaClientUnknownRequestError","stack":"PrismaClientUnknownRequestError: \nInvalid `prisma.transaction.findMany()` invocation:\n\n\nError in connector: Error querying the database: FATAL: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15\n    at $n.handleRequestError (D:\\Web Project\\camp-de-dieu\\app\\backend-eglise\\node_modules\\@prisma\\client\\runtime\\library.js:121:7505)\n    at $n.handleAndLogRequestError (D:\\Web Project\\camp-de-dieu\\app\\backend-eglise\\node_modules\\@prisma\\client\\runtime\\library.js:121:6623)\n    at $n.request (D:\\Web Project\\camp-de-dieu\\app\\backend-eglise\\node_modules\\@prisma\\client\\runtime\\library.js:121:6307)\n    at async l (D:\\Web Project\\camp-de-dieu\\app\\backend-eglise\\node_modules\\@prisma\\client\\runtime\\library.js:130:9633)\n    at async getGlobalDashboard (file:///D:/Web%20Project/camp-de-dieu/app/backend-eglise/src/controllers/dashboardController.js:207:35)","timestamp":"2026-07-22 20:58:40:5840"}
 {"level":"info","message":"👋 Déconnexion: jean.dupont@email.com","timestamp":"2026-07-22 20:58:41:5841"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-07-22 22:06:22:622"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-07-22 22:06:23:623"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-07-22 22:10:40:1040"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-07-22 22:10:40:1040"}

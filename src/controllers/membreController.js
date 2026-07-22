@@ -9,46 +9,86 @@ import logger from "../utils/logger.js";
  */
 export const getMembres = async (req, res) => {
   try {
-    const { page = 1, limit = 50, statut, departementId, search } = req.query
-    const skip = (page - 1) * limit
-    
-    let where = {}
-    
+    const { page = 1, limit = 50, statut, departementId, search } = req.query;
+    const skip = (page - 1) * limit;
+
+    let where = {};
+
     // 🔒 Chef département voit seulement son département
     if (req.user.role === 'chef_departement') {
       const membre = await prisma.membre.findUnique({
         where: { id: req.user.membreId }
-      })
-      
+      });
+
       if (!membre?.departementId) {
-        return res.status(403).json({ message: 'Vous n\'êtes pas assigné à un département' })
+        return res.status(403).json({ message: 'Vous n\'êtes pas assigné à un département' });
       }
-      
-      where.departementId = membre.departementId
+
+      where.departementId = membre.departementId;
     }
-    
+
     // 🔒 Le secrétaire ne voit pas les administrateurs
     if (req.user.role === 'secretaire') {
-      where = {
-        ...where,
-        NOT: {
-          utilisateurs: {
-            role: 'administrateur'
-          }
+      // Solution alternative plus robuste pour la production
+      try {
+        // Récupérer les IDs des administrateurs
+        const adminUsers = await prisma.utilisateur.findMany({
+          where: { role: 'administrateur' },
+          select: { membreId: true }
+        });
+
+        const adminMembreIds = adminUsers
+          .map(u => u.membreId)
+          .filter(id => id !== null);
+
+        if (adminMembreIds.length > 0) {
+          where = {
+            ...where,
+            NOT: {
+              id: {
+                in: adminMembreIds
+              }
+            }
+          };
         }
+      } catch (adminError) {
+        logger.warn('⚠️ Erreur lors de la récupération des administrateurs:', adminError.message);
+        // Fallback: utiliser la syntaxe originale si la première méthode échoue
+        where = {
+          ...where,
+          NOT: {
+            utilisateurs: {
+              role: 'administrateur'
+            }
+          }
+        };
       }
     }
-    
-    if (statut) where.statut = statut
-    if (departementId && req.user.role !== 'chef_departement') where.departementId = departementId
+
+    if (statut) where.statut = statut;
+    if (departementId && req.user.role !== 'chef_departement') where.departementId = departementId;
     if (search) {
       where.OR = [
         { nom: { contains: search, mode: 'insensitive' } },
         { prenom: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } }
-      ]
+      ];
     }
-    
+
+    // Log de la requête pour débogage (uniquement en développement)
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug('🔍 Requête getMembres:', JSON.stringify({
+        where,
+        include: {
+          departement: true,
+          utilisateurs: { select: { role: true, actif: true } }
+        },
+        skip: parseInt(skip),
+        take: parseInt(limit),
+        orderBy: { nom: 'asc' }
+      }, null, 2));
+    }
+
     const [membres, total] = await Promise.all([
       prisma.membre.findMany({
         where,
@@ -63,8 +103,8 @@ export const getMembres = async (req, res) => {
         orderBy: { nom: 'asc' }
       }),
       prisma.membre.count({ where })
-    ])
-    
+    ]);
+
     res.json({
       success: true,
       data: membres,
@@ -74,12 +114,29 @@ export const getMembres = async (req, res) => {
         total,
         pages: Math.ceil(total / limit)
       }
-    })
+    });
   } catch (error) {
-    logger.error('Erreur getMembres:', error)
-    res.status(500).json({ message: 'Erreur interne du serveur' })
+    // Log détaillé de l'erreur
+    logger.error('❌ Erreur getMembres:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: error.stack
+    });
+
+    // Envoyer plus de détails en développement
+    const errorResponse = {
+      message: 'Erreur interne du serveur'
+    };
+
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.details = error.message;
+      errorResponse.code = error.code;
+    }
+
+    res.status(500).json(errorResponse);
   }
-}
+};
 
 /**
  * @desc    Obtenir un membre par ID
@@ -143,8 +200,15 @@ export const getMembreById = async (req, res) => {
 
     res.json({ success: true, data: membre });
   } catch (error) {
-    logger.error("Erreur getMembreById:", error);
-    res.status(500).json({ message: "Erreur interne du serveur" });
+    logger.error("❌ Erreur getMembreById:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: "Erreur interne du serveur",
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
   }
 };
 
@@ -204,8 +268,15 @@ export const createMembre = async (req, res) => {
     if (error.code === "P2002") {
       return res.status(400).json({ message: "Cet email est déjà utilisé" });
     }
-    logger.error("Erreur createMembre:", error);
-    res.status(500).json({ message: "Erreur interne du serveur" });
+    logger.error("❌ Erreur createMembre:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: "Erreur interne du serveur",
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
   }
 };
 
@@ -296,8 +367,15 @@ export const updateMembre = async (req, res) => {
     if (error.code === "P2002") {
       return res.status(400).json({ message: "Cet email est déjà utilisé" });
     }
-    logger.error("Erreur updateMembre:", error);
-    res.status(500).json({ message: "Erreur interne du serveur" });
+    logger.error("❌ Erreur updateMembre:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: "Erreur interne du serveur",
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
   }
 };
 
@@ -367,8 +445,15 @@ export const deleteMembre = async (req, res) => {
     logger.info(`🗑️ Membre supprimé: ${id} par ${req.user.email}`);
     res.json({ success: true, message: "Membre supprimé avec succès" });
   } catch (error) {
-    logger.error("Erreur deleteMembre:", error);
-    res.status(500).json({ message: "Erreur interne du serveur" });
+    logger.error("❌ Erreur deleteMembre:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: "Erreur interne du serveur",
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
   }
 };
 
@@ -410,7 +495,14 @@ export const getMembreStats = async (req, res) => {
       },
     });
   } catch (error) {
-    logger.error("Erreur getMembreStats:", error);
-    res.status(500).json({ message: "Erreur interne du serveur" });
+    logger.error("❌ Erreur getMembreStats:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      message: "Erreur interne du serveur",
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
   }
 };
