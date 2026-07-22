@@ -7,6 +7,8 @@ import logger from '../utils/logger.js'
  * @route   GET /api/membres
  * @access  Private (Pasteur, Secretaire, Admin, Chef dept)
  */
+// backend/src/controllers/membreController.js
+
 export const getMembres = async (req, res) => {
   try {
     const { page = 1, limit = 50, statut, departementId, search } = req.query
@@ -29,11 +31,21 @@ export const getMembres = async (req, res) => {
     
     // 🔒 Le secrétaire ne voit pas les administrateurs
     if (req.user.role === 'secretaire') {
+      // ✅ Correction : utiliser la syntaxe correcte pour filtrer sur une relation
       where.utilisateurs = {
         NOT: {
           role: 'administrateur'
         }
       }
+      // Ou utiliser cette syntaxe alternative :
+      // where = {
+      //   ...where,
+      //   NOT: {
+      //     utilisateurs: {
+      //       role: 'administrateur'
+      //     }
+      //   }
+      // }
     }
     
     if (statut) where.statut = statut
