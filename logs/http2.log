@@ -166,3 +166,10 @@
 {"level":"info","message":"🌐 Port: 5000","timestamp":"2026-07-22 22:35:21:3521"}
 {"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-07-22 22:35:21:3521"}
 {"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-07-22 22:35:21:3521"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-07-22 22:59:48:5948"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-07-22 22:59:49:5949"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-07-22 22:59:49:5949"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-07-22 22:59:49:5949"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-07-22 22:59:49:5949"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-07-22 22:59:49:5949"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-07-22 22:59:49:5949"}

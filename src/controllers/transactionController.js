@@ -8,14 +8,33 @@ const DEFAULT_TX_RATE = 2250
 // ✅ Fonction pour normaliser la devise
 const normalizeDevise = (devise) => {
   if (!devise) return 'CDF'
-  const normalized = devise.toUpperCase().trim()
+  const normalized = String(devise).toUpperCase().trim()
   return normalized === 'USD' ? 'USD' : 'CDF'
+}
+
+// ✅ Fonction pour extraire la devise de différentes sources
+const extractDevise = (body) => {
+  // Essayer différents noms de champs
+  const possibleFields = ['devise', 'currency', 'deviseCode', 'DEVISE', 'Devise', 'currencyCode', 'deviseValue']
+  
+  for (const field of possibleFields) {
+    if (body[field] !== undefined && body[field] !== null) {
+      const value = String(body[field]).toUpperCase().trim()
+      if (value === 'USD' || value === 'CDF') {
+        console.log(`💵 Devise trouvée dans le champ "${field}": ${value}`)
+        return value
+      }
+    }
+  }
+  
+  console.log('💵 Aucune devise trouvée, utilisation de la valeur par défaut: CDF')
+  return 'CDF'
 }
 
 // ✅ Fonction pour normaliser le type
 const normalizeType = (type) => {
   if (!type) return null
-  const normalized = type.toLowerCase().trim()
+  const normalized = String(type).toLowerCase().trim()
   if (['entree', 'revenu', 'revenue', 'income'].includes(normalized)) return 'entree'
   if (['sortie', 'depense', 'expense', 'outcome'].includes(normalized)) return 'sortie'
   return normalized
@@ -393,8 +412,17 @@ export const getTransactionById = async (req, res) => {
 export const createTransaction = async (req, res) => {
   try {
     console.log('💰 Création d\'une transaction - Body reçu:', req.body)
+    console.log('📦 Body keys:', Object.keys(req.body))
+    console.log('📦 Body raw:', JSON.stringify(req.body, null, 2))
     
-    const { type, categorieId, membreId, montant, devise, dateTransaction, description, justificatif } = req.body
+    const { type, categorieId, membreId, montant, dateTransaction, description, justificatif } = req.body
+    
+    // ✅ EXTRAIRE LA DEVISEE AVEC LA FONCTION AMÉLIORÉE
+    const devise = extractDevise(req.body)
+    
+    console.log('💵 Devise extraite:', devise)
+    console.log('💵 Devise originale (req.body.devise):', req.body.devise)
+    console.log('💵 Type de devise originale:', typeof req.body.devise)
     
     // ✅ Validation des champs requis
     const errors = []
@@ -411,9 +439,7 @@ export const createTransaction = async (req, res) => {
       errors.push({ field: 'montant', message: 'Le montant est requis' })
     }
     
-    if (!devise) {
-      errors.push({ field: 'devise', message: 'La devise est requise' })
-    }
+    // ✅ NE PAS VALIDER devise ici car on a une valeur par défaut avec extractDevise
     
     if (errors.length > 0) {
       console.log('❌ Erreurs de validation:', errors)
@@ -437,7 +463,6 @@ export const createTransaction = async (req, res) => {
     }
     
     // ✅ Vérification pour les entrées (membreId requis)
-    // ✅ Pour les sorties, membreId est optionnel
     if (normalizedType === 'entree' && !membreId) {
       console.log('❌ Membre manquant pour une entrée')
       return res.status(400).json({ 
@@ -453,19 +478,6 @@ export const createTransaction = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         message: 'Le montant doit être un nombre supérieur à 0' 
-      })
-    }
-    
-    // ✅ Normaliser la devise avec validation stricte
-    const normalizedDevise = normalizeDevise(devise)
-    console.log(`💵 Devise normalisée: ${devise} -> ${normalizedDevise}`)
-    
-    // ✅ Vérification stricte de la devise
-    if (!normalizedDevise || !['USD', 'CDF'].includes(normalizedDevise)) {
-      console.log(`❌ Devise invalide: ${devise}`)
-      return res.status(400).json({ 
-        success: false,
-        message: 'Devise invalide. Utilisez USD ou CDF' 
       })
     }
     
@@ -485,7 +497,7 @@ export const createTransaction = async (req, res) => {
     
     console.log(`📂 Catégorie trouvée: ${categorie.nom} (${categorie.type})`)
     
-    // ✅ Normaliser le type de la catégorie pour la comparaison
+    // ✅ Normaliser le type de la catégorie
     const categorieType = normalizeType(categorie.type)
     console.log(`📝 Type catégorie normalisé: ${categorie.type} -> ${categorieType}`)
     
@@ -508,10 +520,10 @@ export const createTransaction = async (req, res) => {
     
     // ✅ Calculer les montants convertis
     const tauxChange = DEFAULT_TX_RATE
-    const montantUSD = normalizedDevise === 'USD' ? montantNum : montantNum / tauxChange
-    const montantCDF = normalizedDevise === 'CDF' ? montantNum : montantNum * tauxChange
+    const montantUSD = devise === 'USD' ? montantNum : montantNum / tauxChange
+    const montantCDF = devise === 'CDF' ? montantNum : montantNum * tauxChange
     
-    console.log(`💰 Montant: ${montantNum} ${normalizedDevise} (USD: ${montantUSD}, CDF: ${montantCDF})`)
+    console.log(`💰 Montant: ${montantNum} ${devise} (USD: ${montantUSD}, CDF: ${montantCDF})`)
     
     // ✅ Créer la transaction avec toutes les données requises
     const transactionData = {
@@ -519,7 +531,7 @@ export const createTransaction = async (req, res) => {
       categorieId: categorieId,
       membreId: membreId || null,
       montant: montantNum,
-      devise: normalizedDevise, // ✅ Toujours une chaîne non-nulle
+      devise: devise, // ✅ Maintenant toujours défini grâce à extractDevise
       tauxChange: tauxChange,
       montantUsd: montantUSD,
       montantCdf: montantCDF,
@@ -554,7 +566,7 @@ export const createTransaction = async (req, res) => {
           details: { 
             type: normalizedType, 
             montant: montantNum, 
-            devise: normalizedDevise, 
+            devise: devise, 
             description: description || null 
           },
           ipAddress: req.ip || null
@@ -564,7 +576,7 @@ export const createTransaction = async (req, res) => {
       console.warn('⚠️ Erreur lors de la création du log:', logError.message)
     }
     
-    logger.info(`💰 ${normalizedType === 'entree' ? 'Entrée' : 'Sortie'} créée: ${montantNum} ${normalizedDevise} par ${req.user?.email || 'Système'}`)
+    logger.info(`💰 ${normalizedType === 'entree' ? 'Entrée' : 'Sortie'} créée: ${montantNum} ${devise} par ${req.user?.email || 'Système'}`)
     
     res.status(201).json({ 
       success: true, 
@@ -592,14 +604,6 @@ export const createTransaction = async (req, res) => {
       })
     }
     
-    // ✅ Gestion des erreurs de champ requis
-    if (error.message && error.message.includes('devise')) {
-      return res.status(400).json({
-        success: false,
-        message: 'Le champ devise est requis et doit être une chaîne de caractères'
-      })
-    }
-    
     res.status(500).json({ 
       success: false,
       message: 'Erreur interne du serveur', 
@@ -619,6 +623,7 @@ export const updateTransaction = async (req, res) => {
     const { type, categorieId, membreId, montant, devise, dateTransaction, description, justificatif } = req.body
     
     console.log(`✏️ Modification de la transaction: ${id}`)
+    console.log('📦 Body reçu:', req.body)
     
     const transactionExistant = await prisma.transaction.findUnique({
       where: { id }
@@ -672,7 +677,7 @@ export const updateTransaction = async (req, res) => {
       }
     }
     
-    // ✅ Normaliser la devise si elle est fournie
+    // ✅ Normaliser la devise si elle est fournie (avec la nouvelle fonction)
     let newDevise = transactionExistant.devise
     if (devise) {
       newDevise = normalizeDevise(devise)
