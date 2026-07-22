@@ -36308,3 +36308,10 @@
 {"level":"info","message":"🌐 Port: 5000","timestamp":"2026-07-22 22:14:44:1444"}
 {"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-07-22 22:14:44:1444"}
 {"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-07-22 22:14:44:1444"}
+{"level":"info","message":"✅ Base de données connectée avec succès","timestamp":"2026-07-22 22:29:24:2924"}
+{"level":"info","message":"✅ Base de données opérationnelle","timestamp":"2026-07-22 22:29:25:2925"}
+{"level":"info","message":"🚀 Serveur démarré avec succès","timestamp":"2026-07-22 22:29:25:2925"}
+{"level":"info","message":"📡 Environnement: development","timestamp":"2026-07-22 22:29:25:2925"}
+{"level":"info","message":"🌐 Port: 5000","timestamp":"2026-07-22 22:29:25:2925"}
+{"level":"info","message":"📚 Documentation: http://localhost:5000/api-docs","timestamp":"2026-07-22 22:29:25:2925"}
+{"level":"info","message":"❤️  Health check: http://localhost:5000/health","timestamp":"2026-07-22 22:29:25:2925"}

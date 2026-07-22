@@ -57,7 +57,7 @@ export const getMembres = async (req, res) => {
         where = {
           ...where,
           NOT: {
-            utilisateurs: {
+            utilisateur: {  // ✅ CORRIGÉ
               role: 'administrateur'
             }
           }
@@ -81,7 +81,7 @@ export const getMembres = async (req, res) => {
         where,
         include: {
           departement: true,
-          utilisateurs: { select: { role: true, actif: true } }
+          utilisateur: { select: { role: true, actif: true } }  // ✅ CORRIGÉ
         },
         skip: parseInt(skip),
         take: parseInt(limit),
@@ -94,7 +94,7 @@ export const getMembres = async (req, res) => {
         where,
         include: {
           departement: true,
-          utilisateurs: {
+          utilisateur: {  // ✅ CORRIGÉ
             select: { role: true, actif: true }
           }
         },
@@ -151,7 +151,7 @@ export const getMembreById = async (req, res) => {
       where: { id },
       include: {
         departement: true,
-        utilisateurs: {
+        utilisateur: {  // ✅ CORRIGÉ
           select: {
             role: true,
             actif: true,
@@ -191,9 +191,9 @@ export const getMembreById = async (req, res) => {
     if (req.user.role === "secretaire") {
       const membreWithUser = await prisma.membre.findUnique({
         where: { id },
-        include: { utilisateurs: true },
+        include: { utilisateur: true },  // ✅ CORRIGÉ
       });
-      if (membreWithUser?.utilisateurs?.role === "administrateur") {
+      if (membreWithUser?.utilisateur?.role === "administrateur") {  // ✅ CORRIGÉ
         return res.status(403).json({ message: "Accès non autorisé" });
       }
     }
@@ -302,7 +302,7 @@ export const updateMembre = async (req, res) => {
     const membreExistant = await prisma.membre.findUnique({
       where: { id },
       include: {
-        utilisateurs: true,
+        utilisateur: true,  // ✅ CORRIGÉ
       },
     });
 
@@ -312,7 +312,7 @@ export const updateMembre = async (req, res) => {
 
     // 🔒 Le secrétaire ne peut pas modifier un administrateur
     if (req.user.role === "secretaire") {
-      if (membreExistant?.utilisateurs?.role === "administrateur") {
+      if (membreExistant?.utilisateur?.role === "administrateur") {  // ✅ CORRIGÉ
         return res
           .status(403)
           .json({ message: "Vous ne pouvez pas modifier un administrateur" });
@@ -325,22 +325,20 @@ export const updateMembre = async (req, res) => {
         nom: nom || membreExistant.nom,
         prenom: prenom || membreExistant.prenom,
         email: email !== undefined ? email : membreExistant.email,
-        telephone:
-          telephone !== undefined ? telephone : membreExistant.telephone,
+        telephone: telephone !== undefined ? telephone : membreExistant.telephone,
         adresse: adresse !== undefined ? adresse : membreExistant.adresse,
         dateNaissance: dateNaissance
           ? new Date(dateNaissance)
           : membreExistant.dateNaissance,
         statut: statut || membreExistant.statut,
-        departementId:
-          departementId !== undefined
-            ? departementId
-            : membreExistant.departementId,
+        departementId: departementId !== undefined
+          ? departementId
+          : membreExistant.departementId,
         updatedAt: new Date(),
       },
       include: {
         departement: true,
-        utilisateurs: {
+        utilisateur: {  // ✅ CORRIGÉ
           select: { role: true, actif: true },
         },
       },
