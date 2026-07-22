@@ -456,11 +456,13 @@ export const createTransaction = async (req, res) => {
       })
     }
     
-    // ✅ Normaliser la devise
+    // ✅ Normaliser la devise avec validation stricte
     const normalizedDevise = normalizeDevise(devise)
     console.log(`💵 Devise normalisée: ${devise} -> ${normalizedDevise}`)
     
-    if (!['USD', 'CDF'].includes(normalizedDevise)) {
+    // ✅ Vérification stricte de la devise
+    if (!normalizedDevise || !['USD', 'CDF'].includes(normalizedDevise)) {
+      console.log(`❌ Devise invalide: ${devise}`)
       return res.status(400).json({ 
         success: false,
         message: 'Devise invalide. Utilisez USD ou CDF' 
@@ -511,22 +513,26 @@ export const createTransaction = async (req, res) => {
     
     console.log(`💰 Montant: ${montantNum} ${normalizedDevise} (USD: ${montantUSD}, CDF: ${montantCDF})`)
     
-    // ✅ Créer la transaction
+    // ✅ Créer la transaction avec toutes les données requises
+    const transactionData = {
+      type: normalizedType,
+      categorieId: categorieId,
+      membreId: membreId || null,
+      montant: montantNum,
+      devise: normalizedDevise, // ✅ Toujours une chaîne non-nulle
+      tauxChange: tauxChange,
+      montantUsd: montantUSD,
+      montantCdf: montantCDF,
+      dateTransaction: dateTransaction ? new Date(dateTransaction) : new Date(),
+      description: description || null,
+      justificatif: justificatif || null,
+      createdBy: req.user?.id || null
+    }
+    
+    console.log('📝 Données de la transaction à créer:', transactionData)
+    
     const transaction = await prisma.transaction.create({
-      data: {
-        type: normalizedType,
-        categorieId: categorieId,
-        membreId: membreId || null,
-        montant: montantNum,
-        devise: normalizedDevise,
-        tauxChange: tauxChange,
-        montantUsd: montantUSD,
-        montantCdf: montantCDF,
-        dateTransaction: dateTransaction ? new Date(dateTransaction) : new Date(),
-        description: description || null,
-        justificatif: justificatif || null,
-        createdBy: req.user?.id || null
-      },
+      data: transactionData,
       include: {
         categorie: true,
         membre: {
@@ -571,6 +577,7 @@ export const createTransaction = async (req, res) => {
     console.error('❌ Stack:', error.stack)
     logger.error('Erreur createTransaction:', error)
     
+    // ✅ Gestion des erreurs Prisma spécifiques
     if (error.code === 'P2002') {
       return res.status(400).json({
         success: false,
@@ -582,6 +589,14 @@ export const createTransaction = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Ressource associée non trouvée'
+      })
+    }
+    
+    // ✅ Gestion des erreurs de champ requis
+    if (error.message && error.message.includes('devise')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le champ devise est requis et doit être une chaîne de caractères'
       })
     }
     
@@ -657,7 +672,18 @@ export const updateTransaction = async (req, res) => {
       }
     }
     
-    const newDevise = devise ? normalizeDevise(devise) : transactionExistant.devise
+    // ✅ Normaliser la devise si elle est fournie
+    let newDevise = transactionExistant.devise
+    if (devise) {
+      newDevise = normalizeDevise(devise)
+      if (!newDevise || !['USD', 'CDF'].includes(newDevise)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Devise invalide. Utilisez USD ou CDF'
+        })
+      }
+    }
+    
     const newMontant = montant ? parseFloat(montant) : transactionExistant.montant
     const tauxChange = DEFAULT_TX_RATE
     
