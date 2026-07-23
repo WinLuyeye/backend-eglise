@@ -80,10 +80,7 @@ export const getTransactions = async (req, res) => {
           categorieId: true,
           membreId: true,
           montant: true,
-          devise: true,        // ✅ AJOUTÉ
-          montantCdf: true,    // ✅ AJOUTÉ
-          montantUsd: true,    // ✅ AJOUTÉ
-          tauxChange: true,    // ✅ AJOUTÉ
+          devise: true,
           dateTransaction: true,
           description: true,
           justificatif: true,
@@ -536,21 +533,13 @@ export const createTransaction = async (req, res) => {
       })
     }
     
-    const tauxChange = DEFAULT_TX_RATE
-    const montantUSD = devise === 'USD' ? montantNum : montantNum / tauxChange
-    const montantCDF = devise === 'CDF' ? montantNum : montantNum * tauxChange
-    
-    console.log(`💰 Montant: ${montantNum} ${devise} (USD: ${montantUSD}, CDF: ${montantCDF})`)
-    
+    // ✅ Suppression des champs de conversion
     const transactionData = {
       type: normalizedType,
       categorieId: categorieId,
       membreId: membreId || null,
       montant: montantNum,
       devise: devise,
-      tauxChange: tauxChange,
-      montantUsd: montantUSD,
-      montantCdf: montantCDF,
       dateTransaction: dateTransaction ? new Date(dateTransaction) : new Date(),
       description: description || null,
       justificatif: justificatif || null,
@@ -703,11 +692,8 @@ export const updateTransaction = async (req, res) => {
     }
     
     const newMontant = montant ? parseFloat(montant) : transactionExistant.montant
-    const tauxChange = DEFAULT_TX_RATE
     
-    const montantUSD = newDevise === 'USD' ? newMontant : newMontant / tauxChange
-    const montantCDF = newDevise === 'CDF' ? newMontant : newMontant * tauxChange
-    
+    // ✅ Suppression des champs de conversion
     const transaction = await prisma.transaction.update({
       where: { id },
       data: {
@@ -716,9 +702,6 @@ export const updateTransaction = async (req, res) => {
         membreId: membreId !== undefined ? membreId : transactionExistant.membreId,
         montant: newMontant,
         devise: newDevise,
-        tauxChange: tauxChange,
-        montantUsd: montantUSD,
-        montantCdf: montantCDF,
         dateTransaction: dateTransaction ? new Date(dateTransaction) : transactionExistant.dateTransaction,
         description: description !== undefined ? description : transactionExistant.description,
         justificatif: justificatif !== undefined ? justificatif : transactionExistant.justificatif

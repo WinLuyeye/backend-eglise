@@ -114,6 +114,13 @@ export const validateTransaction = [
     .isUUID().withMessage('ID de membre invalide'),
   body('montant')
     .isFloat({ min: 0.01 }).withMessage('Le montant doit être supérieur à 0'),
+  body('devise')
+    .optional()
+    .isIn(['USD', 'CDF']).withMessage('La devise doit être "USD" ou "CDF"')
+    .customSanitizer(value => {
+      if (!value) return 'CDF'
+      return String(value).toUpperCase().trim()
+    }),
   body('dateTransaction')
     .optional()
     .isISO8601().withMessage('Date invalide')
@@ -121,6 +128,17 @@ export const validateTransaction = [
   body('description')
     .optional()
     .isLength({ max: 500 }).withMessage('La description ne peut pas dépasser 500 caractères'),
+  body('justificatif')
+    .optional()
+    .isLength({ max: 255 }).withMessage('Le justificatif ne peut pas dépasser 255 caractères'),
+  // Validation conditionnelle : si type est 'entree', membreId est requis
+  body('membreId')
+    .custom((value, { req }) => {
+      if (req.body.type === 'entree' && !value) {
+        throw new Error('Pour une entrée, le membre est requis')
+      }
+      return true
+    }),
   handleValidationErrors
 ]
 
@@ -263,6 +281,69 @@ export const validateDateRange = [
   handleValidationErrors
 ]
 
+// ========== VALIDATIONS SPECIFIQUES POUR LES TRANSACTIONS ==========
+
+/**
+ * Validation pour les filtres de transaction
+ */
+export const validateTransactionFilters = [
+  query('type')
+    .optional()
+    .isIn(['entree', 'sortie']).withMessage('Le type doit être "entree" ou "sortie"'),
+  query('categorieId')
+    .optional()
+    .isUUID().withMessage('ID de catégorie invalide'),
+  query('membreId')
+    .optional()
+    .isUUID().withMessage('ID de membre invalide'),
+  query('devise')
+    .optional()
+    .isIn(['USD', 'CDF']).withMessage('La devise doit être "USD" ou "CDF"')
+    .customSanitizer(value => {
+      if (!value) return undefined
+      return String(value).toUpperCase().trim()
+    }),
+  query('dateDebut')
+    .optional()
+    .isISO8601().withMessage('Date de début invalide')
+    .toDate(),
+  query('dateFin')
+    .optional()
+    .isISO8601().withMessage('Date de fin invalide')
+    .toDate()
+    .custom((value, { req }) => {
+      if (req.query.dateDebut && value && new Date(value) < new Date(req.query.dateDebut)) {
+        throw new Error('La date de fin doit être après la date de début')
+      }
+      return true
+    }),
+  handleValidationErrors
+]
+
+/**
+ * Validation pour les rapports financiers
+ */
+export const validateFinancialReport = [
+  query('periode')
+    .optional()
+    .isIn(['all', 'week', 'month', 'year']).withMessage('La période doit être "all", "week", "month" ou "year"'),
+  query('dateDebut')
+    .optional()
+    .isISO8601().withMessage('Date de début invalide')
+    .toDate(),
+  query('dateFin')
+    .optional()
+    .isISO8601().withMessage('Date de fin invalide')
+    .toDate()
+    .custom((value, { req }) => {
+      if (req.query.dateDebut && value && new Date(value) < new Date(req.query.dateDebut)) {
+        throw new Error('La date de fin doit être après la date de début')
+      }
+      return true
+    }),
+  handleValidationErrors
+]
+
 // ========== EXPORT PAR DÉFAUT ==========
 export default {
   handleValidationErrors,
@@ -273,6 +354,8 @@ export default {
   validateMembreId,
   validateTransaction,
   validateTransactionId,
+  validateTransactionFilters,
+  validateFinancialReport,
   validateCategorie,
   validateCategorieId,
   validateDepartement,

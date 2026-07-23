@@ -83,9 +83,6 @@ model Transaction {
   createdBy       String?      @map("created_by") @db.Uuid
   createdAt       DateTime     @default(now()) @map("created_at")
   devise          String       @default("CDF")
-  montantCdf      Decimal?     @map("montant_cdf") @db.Decimal(10, 2)
-  montantUsd      Decimal?     @map("montant_usd") @db.Decimal(10, 2)
-  tauxChange      Decimal?     @map("taux_change") @db.Decimal(10, 2)
   categorie       Categorie    @relation(fields: [categorieId], references: [id])
   createur        Utilisateur? @relation("CreatedBy", fields: [createdBy], references: [id])
   membre          Membre?      @relation(fields: [membreId], references: [id])
