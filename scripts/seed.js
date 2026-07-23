@@ -307,7 +307,7 @@ async function seedCategories() {
 }
 
 // ============================================
-// 4. CRÉATION DES TRANSACTIONS
+// 4. CRÉATION DES TRANSACTIONS (MODIFIÉ)
 // ============================================
 async function seedTransactions(membres, categories, utilisateurs) {
   console.log('💰 Création des transactions...')
@@ -315,7 +315,6 @@ async function seedTransactions(membres, categories, utilisateurs) {
   const transactions = []
   const types = ['entree', 'sortie']
   const devises = ['CDF', 'USD']
-  const tauxChange = 2250
   
   const startDate = new Date('2023-01-01')
   const endDate = new Date('2026-07-20')
@@ -333,33 +332,16 @@ async function seedTransactions(membres, categories, utilisateurs) {
     const devise = randomItem(devises)
     
     let montant
-    let montantCdf, montantUsd
-    
     if (type === 'entree') {
-      if (devise === 'CDF') {
-        montant = randomFloat(500, 50000)
-        montantCdf = montant
-        montantUsd = montant / tauxChange
-      } else {
-        montant = randomFloat(5, 500)
-        montantCdf = montant * tauxChange
-        montantUsd = montant
-      }
+      montant = devise === 'CDF' ? randomFloat(500, 50000) : randomFloat(5, 500)
     } else {
-      if (devise === 'CDF') {
-        montant = randomFloat(1000, 100000)
-        montantCdf = montant
-        montantUsd = montant / tauxChange
-      } else {
-        montant = randomFloat(10, 1000)
-        montantCdf = montant * tauxChange
-        montantUsd = montant
-      }
+      montant = devise === 'CDF' ? randomFloat(1000, 100000) : randomFloat(10, 1000)
     }
     
     const membre = randomItem(membres)
     const dateTransaction = randomDate(startDate, endDate)
     
+    // ✅ Suppression des champs de conversion (montantCdf, montantUsd, tauxChange)
     transactions.push({
       type,
       categorieId: categorie.id,
@@ -367,9 +349,6 @@ async function seedTransactions(membres, categories, utilisateurs) {
       montant,
       dateTransaction,
       devise,
-      montantCdf,
-      montantUsd,
-      tauxChange,
       description: `Transaction ${type} - ${categorie.nom}`,
       justificatif: Math.random() > 0.7 ? `https://eglise.org/justificatif/${i}.pdf` : null,
       createdBy: Math.random() > 0.3 ? randomItem(activeUsers).id : null,
@@ -385,32 +364,15 @@ async function seedTransactions(membres, categories, utilisateurs) {
     const devise = randomItem(devises)
     
     let montant
-    let montantCdf, montantUsd
-    
     if (type === 'entree') {
-      if (devise === 'CDF') {
-        montant = randomFloat(10000, 200000)
-        montantCdf = montant
-        montantUsd = montant / tauxChange
-      } else {
-        montant = randomFloat(50, 1000)
-        montantCdf = montant * tauxChange
-        montantUsd = montant
-      }
+      montant = devise === 'CDF' ? randomFloat(10000, 200000) : randomFloat(50, 1000)
     } else {
-      if (devise === 'CDF') {
-        montant = randomFloat(5000, 50000)
-        montantCdf = montant
-        montantUsd = montant / tauxChange
-      } else {
-        montant = randomFloat(20, 200)
-        montantCdf = montant * tauxChange
-        montantUsd = montant
-      }
+      montant = devise === 'CDF' ? randomFloat(5000, 50000) : randomFloat(20, 200)
     }
     
     const dateTransaction = randomDate(startDate, endDate)
     
+    // ✅ Suppression des champs de conversion
     transactions.push({
       type,
       categorieId: categorie.id,
@@ -418,9 +380,6 @@ async function seedTransactions(membres, categories, utilisateurs) {
       montant,
       dateTransaction,
       devise,
-      montantCdf,
-      montantUsd,
-      tauxChange,
       description: `Transaction église - ${categorie.nom}`,
       justificatif: Math.random() > 0.8 ? `https://eglise.org/justificatif/eglise/${i}.pdf` : null,
       createdBy: Math.random() > 0.4 ? randomItem(activeUsers).id : null,
@@ -580,7 +539,7 @@ async function main() {
     // 4. Catégories
     const categories = await seedCategories()
     
-    // 5. Transactions
+    // 5. Transactions (modifié)
     const transactions = await seedTransactions(membres, categories, utilisateurs)
     
     // 6. Rapports

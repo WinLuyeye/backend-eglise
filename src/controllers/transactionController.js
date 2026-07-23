@@ -14,21 +14,23 @@ const normalizeDevise = (devise) => {
 
 // ✅ Fonction pour extraire la devise de différentes sources
 const extractDevise = (body) => {
-  const possibleFields = ['devise', 'currency', 'deviseCode', 'DEVISE', 'Devise', 'currencyCode', 'deviseValue']
+  if (!body) return 'CDF';
+  
+  const possibleFields = ['devise', 'currency', 'deviseCode', 'DEVISE', 'Devise', 'currencyCode', 'deviseValue'];
   
   for (const field of possibleFields) {
-    if (body[field] !== undefined && body[field] !== null) {
-      const value = String(body[field]).toUpperCase().trim()
+    if (body[field] !== undefined && body[field] !== null && body[field] !== '') {
+      const value = String(body[field]).toUpperCase().trim();
       if (value === 'USD' || value === 'CDF') {
-        console.log(`💵 Devise trouvée dans le champ "${field}": ${value}`)
-        return value
+        console.log(`💵 Devise trouvée dans le champ "${field}": ${value}`);
+        return value;
       }
     }
   }
   
-  console.log('💵 Aucune devise trouvée, utilisation de la valeur par défaut: CDF')
-  return 'CDF'
-}
+  console.log('💵 Aucune devise valide trouvée, utilisation de CDF par défaut');
+  return 'CDF'; // ✅ Toujours retourner une valeur
+};
 
 // ✅ Fonction pour normaliser le type
 const normalizeType = (type) => {
