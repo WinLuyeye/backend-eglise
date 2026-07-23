@@ -14,7 +14,6 @@ const normalizeDevise = (devise) => {
 
 // ✅ Fonction pour extraire la devise de différentes sources
 const extractDevise = (body) => {
-  // Essayer différents noms de champs
   const possibleFields = ['devise', 'currency', 'deviseCode', 'DEVISE', 'Devise', 'currencyCode', 'deviseValue']
   
   for (const field of possibleFields) {
@@ -75,13 +74,42 @@ export const getTransactions = async (req, res) => {
     const [transactions, total] = await Promise.all([
       prisma.transaction.findMany({
         where,
-        include: {
-          categorie: true,
+        select: {
+          id: true,
+          type: true,
+          categorieId: true,
+          membreId: true,
+          montant: true,
+          devise: true,        // ✅ AJOUTÉ
+          montantCdf: true,    // ✅ AJOUTÉ
+          montantUsd: true,    // ✅ AJOUTÉ
+          tauxChange: true,    // ✅ AJOUTÉ
+          dateTransaction: true,
+          description: true,
+          justificatif: true,
+          createdBy: true,
+          createdAt: true,
+          categorie: {
+            select: {
+              id: true,
+              nom: true,
+              type: true,
+              description: true,
+              createdAt: true
+            }
+          },
           membre: {
-            select: { nom: true, prenom: true }
+            select: { 
+              id: true,
+              nom: true, 
+              prenom: true 
+            }
           },
           createur: {
-            select: { email: true }
+            select: { 
+              id: true,
+              email: true 
+            }
           }
         },
         skip: parseInt(skip),
@@ -417,14 +445,12 @@ export const createTransaction = async (req, res) => {
     
     const { type, categorieId, membreId, montant, dateTransaction, description, justificatif } = req.body
     
-    // ✅ EXTRAIRE LA DEVISEE AVEC LA FONCTION AMÉLIORÉE
     const devise = extractDevise(req.body)
     
     console.log('💵 Devise extraite:', devise)
     console.log('💵 Devise originale (req.body.devise):', req.body.devise)
     console.log('💵 Type de devise originale:', typeof req.body.devise)
     
-    // ✅ Validation des champs requis
     const errors = []
     
     if (!type) {
@@ -439,8 +465,6 @@ export const createTransaction = async (req, res) => {
       errors.push({ field: 'montant', message: 'Le montant est requis' })
     }
     
-    // ✅ NE PAS VALIDER devise ici car on a une valeur par défaut avec extractDevise
-    
     if (errors.length > 0) {
       console.log('❌ Erreurs de validation:', errors)
       return res.status(400).json({ 
@@ -450,7 +474,6 @@ export const createTransaction = async (req, res) => {
       })
     }
     
-    // ✅ Normaliser le type
     const normalizedType = normalizeType(type)
     console.log(`📝 Type normalisé: ${type} -> ${normalizedType}`)
     
@@ -462,7 +485,6 @@ export const createTransaction = async (req, res) => {
       })
     }
     
-    // ✅ Vérification pour les entrées (membreId requis)
     if (normalizedType === 'entree' && !membreId) {
       console.log('❌ Membre manquant pour une entrée')
       return res.status(400).json({ 
@@ -471,7 +493,6 @@ export const createTransaction = async (req, res) => {
       })
     }
     
-    // ✅ Vérification du montant
     const montantNum = parseFloat(montant)
     if (isNaN(montantNum) || montantNum <= 0) {
       console.log(`❌ Montant invalide: ${montant}`)
@@ -481,7 +502,6 @@ export const createTransaction = async (req, res) => {
       })
     }
     
-    // ✅ Vérifier que la catégorie existe
     console.log(`🔍 Recherche de la catégorie: ${categorieId}`)
     const categorie = await prisma.categorie.findUnique({
       where: { id: categorieId }
@@ -497,11 +517,9 @@ export const createTransaction = async (req, res) => {
     
     console.log(`📂 Catégorie trouvée: ${categorie.nom} (${categorie.type})`)
     
-    // ✅ Normaliser le type de la catégorie
     const categorieType = normalizeType(categorie.type)
     console.log(`📝 Type catégorie normalisé: ${categorie.type} -> ${categorieType}`)
     
-    // ✅ Vérifier que le type de la catégorie correspond
     let isValidCategory = false
     
     if (normalizedType === 'entree' && categorieType === 'entree') {
@@ -518,20 +536,18 @@ export const createTransaction = async (req, res) => {
       })
     }
     
-    // ✅ Calculer les montants convertis
     const tauxChange = DEFAULT_TX_RATE
     const montantUSD = devise === 'USD' ? montantNum : montantNum / tauxChange
     const montantCDF = devise === 'CDF' ? montantNum : montantNum * tauxChange
     
     console.log(`💰 Montant: ${montantNum} ${devise} (USD: ${montantUSD}, CDF: ${montantCDF})`)
     
-    // ✅ Créer la transaction avec toutes les données requises
     const transactionData = {
       type: normalizedType,
       categorieId: categorieId,
       membreId: membreId || null,
       montant: montantNum,
-      devise: devise, // ✅ Maintenant toujours défini grâce à extractDevise
+      devise: devise,
       tauxChange: tauxChange,
       montantUsd: montantUSD,
       montantCdf: montantCDF,
@@ -555,7 +571,6 @@ export const createTransaction = async (req, res) => {
     
     console.log(`✅ Transaction créée avec succès: ${transaction.id}`)
     
-    // ✅ Log d'activité
     try {
       await prisma.logActivite.create({
         data: {
@@ -589,7 +604,6 @@ export const createTransaction = async (req, res) => {
     console.error('❌ Stack:', error.stack)
     logger.error('Erreur createTransaction:', error)
     
-    // ✅ Gestion des erreurs Prisma spécifiques
     if (error.code === 'P2002') {
       return res.status(400).json({
         success: false,
@@ -677,7 +691,6 @@ export const updateTransaction = async (req, res) => {
       }
     }
     
-    // ✅ Normaliser la devise si elle est fournie (avec la nouvelle fonction)
     let newDevise = transactionExistant.devise
     if (devise) {
       newDevise = normalizeDevise(devise)
