@@ -67,8 +67,10 @@ export const getMembres = async (req, res) => {
         where = {
           ...where,
           NOT: {
-            utilisateur: {
-              role: 'administrateur'
+            utilisateurs: {  // ✅ CORRIGÉ: utilisateurs (pluriel)
+              some: {
+                role: 'administrateur'
+              }
             }
           }
         };
@@ -90,7 +92,9 @@ export const getMembres = async (req, res) => {
         where,
         include: {
           departement: true,
-          utilisateur: { select: { role: true, actif: true } }
+          utilisateurs: {  // ✅ CORRIGÉ: utilisateurs (pluriel)
+            select: { role: true, actif: true }
+          }
         },
         skip: parseInt(skip),
         take: parseInt(limit),
@@ -103,7 +107,7 @@ export const getMembres = async (req, res) => {
         where,
         include: {
           departement: true,
-          utilisateur: {
+          utilisateurs: {  // ✅ CORRIGÉ: utilisateurs (pluriel)
             select: { role: true, actif: true }
           }
         },
@@ -160,7 +164,7 @@ export const getMembreById = async (req, res) => {
       where: { id },
       include: {
         departement: true,
-        utilisateur: {
+        utilisateurs: {  // ✅ CORRIGÉ: utilisateurs (pluriel)
           select: {
             role: true,
             actif: true,
@@ -200,9 +204,9 @@ export const getMembreById = async (req, res) => {
     if (req.user.role === "secretaire") {
       const membreWithUser = await prisma.membre.findUnique({
         where: { id },
-        include: { utilisateur: true },
+        include: { utilisateurs: true },  // ✅ CORRIGÉ: utilisateurs (pluriel)
       });
-      if (membreWithUser?.utilisateur?.role === "administrateur") {
+      if (membreWithUser?.utilisateurs?.role === "administrateur") {  // ✅ CORRIGÉ
         return res.status(403).json({ message: "Accès non autorisé" });
       }
     }
@@ -311,7 +315,7 @@ export const updateMembre = async (req, res) => {
     const membreExistant = await prisma.membre.findUnique({
       where: { id },
       include: {
-        utilisateur: true,
+        utilisateurs: true,  // ✅ CORRIGÉ: utilisateurs (pluriel)
       },
     });
 
@@ -321,7 +325,7 @@ export const updateMembre = async (req, res) => {
 
     // 🔒 Le secrétaire ne peut pas modifier un administrateur
     if (req.user.role === "secretaire") {
-      if (membreExistant?.utilisateur?.role === "administrateur") {
+      if (membreExistant?.utilisateurs?.role === "administrateur") {  // ✅ CORRIGÉ
         return res
           .status(403)
           .json({ message: "Vous ne pouvez pas modifier un administrateur" });
@@ -347,7 +351,7 @@ export const updateMembre = async (req, res) => {
       },
       include: {
         departement: true,
-        utilisateur: {
+        utilisateurs: {  // ✅ CORRIGÉ: utilisateurs (pluriel)
           select: { role: true, actif: true },
         },
       },
